@@ -1,0 +1,160 @@
+esphome:
+  build_path: !env_var FAN_BUILD_DIR /tmp/single-fan-build
+  name: breezebox
+  name_add_mac_suffix: true
+  friendly_name: BreezeBox
+  min_version: 2026.10.1
+  project:
+    name: local.single_fan
+    version: 1.3.1
+esp32:
+  board: esp32dev
+  flash_size: 4MB
+  partitions: partitions.csv
+  framework:
+    type: esp-idf
+    advanced:
+      enable_ota_rollback: true
+    sdkconfig_options:
+      CONFIG_HTTPD_MAX_REQ_HDR_LEN: "4096"
+logger:
+  level: INFO
+api:
+  reboot_timeout: 0s
+ota:
+  - platform: esphome
+  - platform: web_server
+safe_mode:
+  boot_is_good_after: 10s
+web_server_base:
+  id: web_base
+web_server:
+  port: 80
+  version: 1
+  js_url: ""
+  css_url: ""
+  log: false
+  web_server_base_id: web_base
+wifi:
+  reboot_timeout: 0s
+  ap:
+    ap_timeout: 20s
+captive_portal:
+improv_ble:
+  id: fan_provisioning
+  authorizer: none
+  authorized_duration: 3min
+  wifi_timeout: 60s
+mdns:
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [single_fan, improv_ble, wifi, esp32_ble_server, captive_portal]
+i2c:
+  sda: GPIO13
+  scl: GPIO14
+  frequency: 50kHz
+output:
+  - platform: ledc
+    id: fan_pwm
+    pin: GPIO16
+    frequency: 25000Hz
+  - platform: gpio
+    id: fan_power
+    pin: GPIO21
+sensor:
+  - platform: sht3xd
+    address: 0x44
+    temperature:
+      id: raw_temperature
+      internal: true
+    humidity:
+      id: raw_humidity
+      internal: true
+    update_interval: 2s
+  - platform: pulse_counter
+    id: raw_rpm
+    internal: true
+    pin:
+      number: GPIO32
+      mode: {input: true, pullup: true}
+    count_mode: {rising_edge: INCREMENT, falling_edge: DISABLE}
+    update_interval: 1s
+font:
+  - file: fonts/NotoSansSC-Regular.otf
+    id: oled_font
+    size: 11
+    glyphs: '蓝牙启在识别IP单击备到松后开 !%-.0123456789:<>C°中临他保入关其准出切制动厂取可复失如存已常度异式恢成手按换接控故新方无时显有未校模正消温湿点热状界确示秒等络网置联自菜认设误请败转进连速配重错键长页风高'
+display:
+  - platform: ssd1306_i2c
+    id: oled
+    model: SSD1306 128x32
+    address: 0x3C
+    rotation: 180°
+    reset_pin: GPIO17
+    update_interval: 500ms
+    lambda: id(controller).draw_current();
+single_fan:
+  id: controller
+  pwm_output: fan_pwm
+  power_output: fan_power
+  temperature_source: raw_temperature
+  humidity_source: raw_humidity
+  rpm_source: raw_rpm
+  screen: oled
+  font: oled_font
+  web_server_base_id: web_base
+  center_button: button_push
+  up_button: button_up
+  down_button: button_down
+  left_button: button_left
+  right_button: button_right
+  provisioning: fan_provisioning
+binary_sensor:
+  - platform: gpio
+    id: button_push
+    internal: true
+    pin:
+      number: GPIO0
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+      ignore_strapping_warning: true
+  - platform: gpio
+    id: button_up
+    internal: true
+    pin:
+      number: GPIO22
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+  - platform: gpio
+    id: button_down
+    internal: true
+    pin:
+      number: GPIO25
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+  - platform: gpio
+    id: button_left
+    internal: true
+    pin:
+      number: GPIO26
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+  - platform: gpio
+    id: button_right
+    internal: true
+    pin:
+      number: GPIO27
+      mode:
+        input: true
+        pullup: true
+      inverted: true

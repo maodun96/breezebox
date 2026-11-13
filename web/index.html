@@ -1,0 +1,660 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>智能风扇控制器</title>
+<script>try{var m=localStorage.fanTheme||'system';document.documentElement.dataset.theme=m=='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m}catch(e){}</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}[hidden]{display:none!important}
+:root{--bg:#EDF0F5;--surface:#fff;--surface2:#E6EAF1;--sheet:#F3F5F9;--line:rgba(14,22,32,.07);--line2:rgba(14,22,32,.1);--ink:#0E1620;--muted:#6A7581;--faint:#C3CBD3;--accent:#2F6BFF;--accent2:#7C5CFF;--accent-ink:#fff;--accent-soft:rgba(47,107,255,.1);--accent-glow:rgba(47,107,255,.4);--seg-ind:#0E1620;--ok:#16B26A;--warn:#DE8A0A;--warn-soft:rgba(222,138,10,.11);--danger:#E5484D;--danger-soft:rgba(229,72,77,.1);--bar:rgba(255,255,255,.86);--blade-op:.055;--glow-op:.28;--toast:#0E1620;--toast-ink:#fff;--warm:#EE7433;color-scheme:light}
+[data-theme=dark]{--bg:#0A0D12;--surface:#141922;--surface2:#1F2531;--sheet:#0F131A;--line:rgba(255,255,255,.06);--line2:rgba(255,255,255,.09);--ink:#EEF2F6;--muted:#7F8A96;--faint:#353E4C;--accent:#5BB8FF;--accent2:#9A84FF;--accent-ink:#06172B;--accent-soft:rgba(91,184,255,.14);--accent-glow:rgba(91,184,255,.5);--seg-ind:#2A3242;--ok:#46D68C;--warn:#FFB547;--warn-soft:rgba(255,181,71,.11);--danger:#FF6464;--danger-soft:rgba(255,100,100,.12);--bar:rgba(22,27,36,.84);--blade-op:.09;--glow-op:.55;--toast:#EEF2F6;--toast-ink:#0C0F12;--warm:#FF9A62;color-scheme:dark}
+html{background:var(--bg)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",Roboto,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:default;opacity:.4}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ic{display:block;flex:none}
+.n,.big,.tile b,.stepper b{font-variant-numeric:tabular-nums}
+.wrap{max-width:1200px;margin:0 auto;padding:0 28px 48px}
+.top{display:flex;align-items:center;gap:20px;height:88px}
+.ident{flex:1;display:flex;align-items:center;gap:12px;min-width:0}
+.dev-ico{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink);flex:none;transition:background .3s}
+.dev-ico.off{background:var(--surface2);color:var(--muted)}
+.idt{min-width:0}
+.status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:500;height:16px;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
+.dot.off{background:var(--faint)}.dot.warn{background:var(--warn)}.dot.sync{background:var(--accent);animation:pulse .8s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.dev-name{display:flex;align-items:center;gap:6px;font-size:22px;font-weight:700;letter-spacing:-.01em;max-width:100%}
+.dev-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dev-name .ic{color:var(--faint)}.dev-name:hover .ic{color:var(--muted)}
+.tabs{display:flex;gap:4px;padding:5px;border-radius:999px;background:var(--surface)}
+.tab{display:flex;align-items:center;gap:7px;height:42px;padding:0 17px;border-radius:999px;color:var(--muted);font-weight:600;font-size:14px;white-space:nowrap;transition:background .25s,color .25s}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
+.hr{flex:1;display:flex;justify-content:flex-end}
+.pwr{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:var(--surface2);color:var(--muted);transition:background .3s,color .3s,box-shadow .3s,transform .12s;flex:none}
+.pwr.on{background:var(--accent);color:var(--accent-ink);box-shadow:0 10px 26px -8px var(--accent-glow)}
+.pwr:active{transform:scale(.93)}
+#banners{display:grid;gap:10px;margin-bottom:18px}#banners:empty{display:none}
+.banner{display:flex;gap:12px;align-items:center;padding:12px 12px 12px 14px;border-radius:18px;background:var(--warn-soft)}
+.banner>.ic{color:var(--warn)}
+.banner.info{background:var(--accent-soft)}.banner.info>.ic{color:var(--accent)}
+.banner.err{background:var(--danger-soft)}.banner.err>.ic{color:var(--danger)}
+.bn-main{flex:1;min-width:0}.bn-main b{display:block;font-size:14px}.bn-main span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.5}
+.bn-main .pbar{margin-top:8px;max-width:420px}
+.bn-btn{padding:7px 14px;border-radius:999px;background:var(--surface);font-size:13px;font-weight:600;white-space:nowrap}
+.panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.panel[hidden]{display:none}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--surface);border-radius:24px;padding:20px;min-width:0}
+.card-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.card-h b{display:block;font-size:17px}
+.card-h span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.pill{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-soft);padding:6px 11px;border-radius:999px;white-space:nowrap}
+.pill.warn{color:var(--warn);background:var(--warn-soft)}.pill.err{color:var(--danger);background:var(--danger-soft)}.pill.mute{color:var(--muted);background:var(--surface2)}
+.pill-btn{font-size:12px;font-weight:700;color:var(--accent-ink);background:var(--accent);padding:7px 12px;border-radius:999px;white-space:nowrap}
+.link{display:flex;align-items:center;gap:2px;font-size:13px;font-weight:600;color:var(--accent);white-space:nowrap}
+.note{font-size:12.5px;color:var(--muted);line-height:1.65;margin-top:12px}
+.btn{width:100%;height:50px;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:15px;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s}
+.btn:active{transform:scale(.98)}.btn.ghost{background:var(--surface2);color:var(--ink)}.btn.danger{background:var(--danger-soft);color:var(--danger)}
+.pbar{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden}
+.pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .3s}
+/* run */
+.run{align-items:center}
+.dial-col{display:flex;justify-content:center;padding:6px 0 20px}
+.dial-wrap{position:relative;width:420px;height:420px;flex:none;transition:opacity .3s}
+#dial{width:100%;height:100%;display:block;overflow:visible;cursor:grab}
+.locked #dial{cursor:default}
+.d-disc{fill:var(--surface)}.d-track{stroke:var(--surface2)}.d-glow{opacity:var(--glow-op)}
+.d-tick{stroke:var(--faint);stroke-width:2;stroke-linecap:round}.d-tick.mj{stroke-width:2.5}.d-tick.on{stroke:var(--accent)}
+.d-blades{fill:var(--ink);opacity:var(--blade-op)}.d-hub{fill:var(--ink);opacity:calc(var(--blade-op)*1.6)}
+.d-knob{transition:opacity .25s}.locked .d-knob{opacity:0}
+.readout{position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);display:flex;flex-direction:column;align-items:center;pointer-events:none;width:250px}
+.tag{font-size:11px;font-weight:700;letter-spacing:.06em;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);height:21px;white-space:nowrap}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}.tag:empty{visibility:hidden}
+.big{display:flex;justify-content:center;align-items:center;line-height:1;height:118px}
+#num{font-size:108px;font-weight:300;letter-spacing:-.045em}
+#unitLbl{font-size:24px;color:var(--muted);margin-left:4px;align-self:flex-end;margin-bottom:22px}
+.big.rpm #num{font-size:60px;font-weight:400;letter-spacing:-.03em}.big.rpm #unitLbl{font-size:17px;margin-bottom:38px}
+.big.txt #num{font-size:40px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+.sub{pointer-events:auto;margin-top:4px;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);padding:6px 12px;border-radius:999px;background:var(--surface2);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sub b{font-weight:600;color:var(--ink)}.sub.warn,.sub.warn b{color:var(--warn)}.sub.warn .live{background:var(--warn)}.sub .ic{opacity:.7}
+.live{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:pulse 1.6s infinite}
+.step{position:absolute;bottom:14px;width:52px;height:52px;border-radius:50%;background:var(--surface);display:grid;place-items:center;transition:opacity .25s,transform .1s;touch-action:none}
+.step:active{transform:scale(.9);background:var(--surface2)}
+.step.minus{left:50px}.step.plus{right:50px}
+.locked .step{opacity:0;pointer-events:none}
+.env{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:999px;background:var(--surface);font-size:13.5px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
+.env .ic.t{color:var(--warm)}.env .ic.h{color:#4FA8FF}.env i{width:1px;height:12px;background:var(--line2);margin:0 7px}.env .warn{color:var(--warn)}
+.dim .dial-wrap,.dim .ctl{opacity:.4;pointer-events:none}
+.seg{position:relative;display:grid;grid-template-columns:1fr 1fr;height:56px;border-radius:28px;background:var(--surface2);padding:5px}
+.seg .ind{position:absolute;top:5px;bottom:5px;left:5px;width:calc(50% - 5px);border-radius:23px;background:var(--seg-ind);transition:transform .38s cubic-bezier(.3,.75,.2,1)}
+.seg[data-v="1"] .ind{transform:translateX(100%)}
+.seg button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:7px;font-weight:600;font-size:15px;color:var(--muted);transition:color .3s}
+.seg button.act{color:#fff}
+.mode-box{height:70px;margin-top:14px}
+.presets{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:100%}
+.pre{padding:0 14px;display:flex;flex-direction:column;justify-content:center;border-radius:18px;background:var(--surface2);text-align:left;border:1.5px solid transparent;transition:border-color .2s,background .2s;min-width:0}
+.pre[data-a=custom]{-webkit-touch-callout:none;user-select:none}
+.pre b{font-size:15px;font-weight:600}.pre span{font-size:12.5px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pre em{display:none}.pre .r{display:block;font-size:11.5px;opacity:.8}
+.pre.act{border-color:var(--accent);background:var(--accent-soft)}.pre.act span{color:var(--accent)}
+.auto-card{display:flex;align-items:center;gap:14px;width:100%;height:100%;padding:0 14px;border-radius:18px;background:var(--surface2);text-align:left}
+.auto-card .ac-t{flex:1;min-width:0}.auto-card b{font-size:14px;display:block}.auto-card span{font-size:12.5px;color:var(--muted);display:block;margin-top:2px}
+.auto-card>.ic{color:var(--muted)}
+.spark{flex:none;border-radius:10px;background:var(--surface)}
+.graph{width:100%;display:block;touch-action:none;overflow:visible}
+.g-grid{stroke:var(--line2);stroke-dasharray:3 4}.g-lbl{fill:var(--muted);font-size:11px}
+.g-line{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round}
+.g-now{stroke:var(--warm);stroke-dasharray:3 4;stroke-width:1.5}.g-now-pill{fill:var(--warm);opacity:.16}.g-now-t{fill:var(--warm);font-size:11px;font-weight:600}.g-now-dot{fill:var(--warm);stroke:var(--surface);stroke-width:2.5}
+.g-node{fill:var(--accent);stroke:var(--surface);stroke-width:2;cursor:grab}.g-sel{fill:var(--surface);stroke:var(--accent);stroke-width:3;cursor:grab}.g-halo{fill:var(--accent);opacity:.18}
+.g-bub{fill:var(--ink)}.g-bub-t{fill:var(--bg);font-size:11px;font-weight:600}
+.g-live{fill:var(--accent2);stroke:var(--surface);stroke-width:2.5}
+.rows{padding:4px 0}
+.row{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:0 16px;text-align:left;position:relative}
+.row+.row::before{content:"";position:absolute;top:0;left:58px;right:0;height:1px;background:var(--line)}
+.kv+.kv::before{left:16px}
+button.row:not(:disabled):hover{background:color-mix(in srgb,var(--surface2) 50%,transparent)}
+.ri{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,transparent);flex:none}.danger .ri{color:var(--danger);background:color-mix(in srgb,var(--danger) 16%,transparent)}
+.rt{flex:1;font-size:15px;font-weight:500;min-width:0}
+.rt small{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:1px}
+.rv{font-size:14px;color:var(--muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px}
+.rv.warn{color:var(--warn)}.chev{color:var(--faint)}
+.row.danger .rt{color:var(--danger)}
+.grp-lbl{font-size:12px;color:var(--muted);font-weight:600;margin:6px 8px -8px;letter-spacing:.05em}
+.grp{padding:4px 0}
+.bars{display:flex;align-items:flex-end;gap:2px;height:12px}.bars i{width:3px;border-radius:1px;background:var(--faint)}.bars i.on{background:var(--ok)}
+/* curve */
+.curve{grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr)}
+.chips{display:flex;gap:4px;padding:3px;border-radius:999px;background:var(--surface2)}
+.chip{padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600;color:var(--muted)}
+.chip.act{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.h-act{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.adv{display:flex;align-items:center;gap:8px}.adv .ic{color:var(--accent)}
+.node-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.node-head b{font-size:15px}.node-head em{font-style:normal}.node-head span{font-size:12.5px;color:var(--muted)}
+.icon-btn{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:var(--muted)}
+.icon-btn.del{color:var(--danger)}
+.node-row{display:flex;align-items:center;justify-content:space-between;min-height:62px}
+.node-row+.node-row{border-top:1px solid var(--line)}
+.node-row>span{font-size:15px;font-weight:500}.node-row>span small{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.node-row>span small.warn{color:var(--warn)}
+.stepper{display:flex;align-items:center;gap:4px}
+.stepper button{width:38px;height:38px;border-radius:13px;background:var(--surface2);display:grid;place-items:center;touch-action:none}
+.stepper button:active{transform:scale(.9)}
+.stepper b{min-width:92px;text-align:center;font-size:21px;font-weight:500}
+.stepper b u{text-decoration:none;font-size:12px;color:var(--muted);margin-left:2px}
+.pts{padding:6px}
+.pt{display:grid;grid-template-columns:24px 1fr 1fr 1.3fr;align-items:center;gap:8px;width:100%;height:40px;padding:0 10px;border-radius:12px;font-size:14px;font-variant-numeric:tabular-nums;text-align:left}
+.pt i{font-style:normal;font-size:12px;color:var(--muted)}.pt em{font-style:normal;color:var(--muted);font-size:13px;text-align:right}
+.pt.act{background:var(--accent-soft)}.pt.act i{color:var(--accent)}
+.pt.head{height:30px;font-size:12px;color:var(--muted);cursor:default}
+.add-node{width:100%;height:46px;margin-top:6px;border-radius:14px;border:1.5px dashed var(--faint);color:var(--muted);font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px}
+.savebar{display:flex;align-items:center;gap:10px;padding:12px 12px 12px 18px}
+.savebar p{flex:1;font-size:13px;color:var(--muted)}.savebar p.warn{color:var(--warn);font-weight:600}
+.savebar .btn{width:auto;height:42px;margin:0;padding:0 18px;font-size:14px;border-radius:14px}
+/* cal */
+.cal-ring{position:relative;width:170px;height:170px;margin:4px auto 14px}
+.cal-ring .cn{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;font-weight:300;font-variant-numeric:tabular-nums}
+.cal-ring .cn u{text-decoration:none;font-size:12px;color:var(--muted);font-weight:500}
+.cal-hero{width:120px;height:120px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;color:var(--accent);box-shadow:0 0 0 12px var(--accent-soft);margin:14px auto 26px}
+.cal-hero.warn{color:var(--warn);box-shadow:0 0 0 12px var(--warn-soft)}.cal-hero.err{color:var(--danger);box-shadow:0 0 0 12px var(--danger-soft)}
+.cal-msg{text-align:center;font-size:15px;font-weight:600}.cal-msg+.note{text-align:center;margin-top:6px}
+.livechips{display:grid;grid-template-columns:repeat(2,max-content);justify-content:center;gap:6px;margin-bottom:14px}
+.livechips span{font-size:12.5px;padding:5px 10px;border-radius:999px;background:var(--surface2);color:var(--muted);font-variant-numeric:tabular-nums}
+.livechips b{color:var(--ink);font-weight:600}
+.stages{border-radius:16px;background:var(--surface2);overflow:hidden}
+.st{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;font-size:14px}
+.st+.st{border-top:1px solid var(--line)}
+.st .sd{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;flex:none;border:2px solid var(--faint)}
+.st.done .sd{border:0;background:var(--accent);color:var(--accent-ink)}
+.st.active{font-weight:600}.st.active .sd{border-color:var(--accent);border-top-color:transparent;animation:rot .9s linear infinite}
+.st.pend{color:var(--muted)}.st.fail{color:var(--danger);font-weight:600}.st.fail .sd{border:0;background:var(--danger);color:#fff}
+@keyframes rot{to{transform:rotate(360deg)}}
+.errbox{border-radius:16px;background:var(--danger-soft);padding:14px 16px;font-size:13px;line-height:1.7}
+.errbox b{color:var(--danger);font-size:14px;display:block}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tile{background:var(--surface2);border-radius:16px;padding:12px 14px;min-width:0}
+.tile small{display:block;font-size:12px;color:var(--muted)}
+.tile b{font-size:24px;font-weight:500;display:block;margin-top:2px}.tile b u{text-decoration:none;font-size:12px;color:var(--muted);margin-left:2px}
+.tile span{font-size:12px;color:var(--muted);white-space:nowrap}
+details.card summary{cursor:pointer;font-weight:600;font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary::after{content:"+";font-size:20px;color:var(--muted);font-weight:400}
+details[open].card summary::after{content:"−"}
+/* dialogs */
+#layer{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center}
+#layer.show{display:flex}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.45);animation:fade .2s}
+.dlg{position:relative;width:min(440px,calc(100% - 32px));max-height:88vh;overflow:auto;border-radius:26px;background:var(--sheet);padding:8px 20px 20px;box-shadow:0 20px 50px rgba(0,0,0,.3);animation:pop .22s ease}
+.dlg-h{display:flex;align-items:center;justify-content:space-between;min-height:54px;gap:10px}
+.dlg-h h3{font-size:18px}
+.x{width:32px;height:32px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;color:var(--muted);flex:none}
+.dlg-b>p{font-size:14px;color:var(--muted);line-height:1.65}
+.dlg-btns{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px;margin-top:20px}
+.dlg-btns button{height:48px;border-radius:15px;background:var(--surface2);font-weight:600;font-size:15px}
+.dlg-btns .primary{background:var(--accent);color:var(--accent-ink)}.dlg-btns .danger{background:var(--danger);color:#fff}
+.opts{border-radius:18px;background:var(--surface);overflow:hidden}
+.opt{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:10px 14px;text-align:left;position:relative}
+.opt+.opt::before{content:"";position:absolute;top:0;left:14px;right:0;height:1px;background:var(--line)}
+.opt .rt{font-size:15px}.opt .ck{color:var(--accent)}
+.field{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:16px;padding:0 14px;height:54px}
+.field input{flex:1;min-width:0;outline:0;font-size:16px;cursor:text}
+.field .cnt{font-size:12px;color:var(--muted)}
+.file{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:16px;padding:14px;border:1.5px dashed var(--faint);cursor:pointer;margin-top:14px}
+.file input{display:none}.file .ic{color:var(--accent)}.file span{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes pop{from{transform:scale(.92);opacity:0}}@keyframes fade{from{opacity:0}}
+#toast{position:fixed;bottom:32px;left:50%;transform:translate(-50%,14px);opacity:0;padding:10px 18px;border-radius:999px;background:var(--toast);color:var(--toast-ink);font-size:13px;font-weight:600;z-index:60;transition:opacity .3s,transform .3s;pointer-events:none;max-width:calc(100% - 32px);text-align:center;box-shadow:0 10px 30px -8px rgba(0,0,0,.35)}
+#toast.show{opacity:1;transform:translate(-50%,0)}#toast.err{background:var(--danger);color:#fff}
+@media(max-width:999px){.panel,.curve{grid-template-columns:minmax(0,1fr);max-width:600px;margin:0 auto}.dk{display:none!important}}
+@media(min-width:1000px){.mb{display:none!important}}
+@media(max-width:759px){
+.wrap{padding:0 16px calc(104px + env(safe-area-inset-bottom))}.wrap:has(#p-run:not([hidden])){padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+.top{height:76px;gap:12px}.dev-ico{display:none}.dev-name{font-size:23px}
+.tabs{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));height:66px;z-index:40;border-radius:26px;background:var(--bar);-webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);box-shadow:0 12px 30px -12px rgba(0,0,0,.4),inset 0 0 0 1px var(--line2);padding:6px}
+.tab{flex:1;flex-direction:column;justify-content:center;gap:3px;height:54px;padding:0 2px;border-radius:20px;font-size:11px}
+.hr{flex:none}
+.run .ctl{background:none;padding:0}
+.dial-col{padding:4px 0 18px}
+.dial-wrap{width:336px;height:336px;zoom:calc(clamp(220px,calc(100svh - 348px - env(safe-area-inset-bottom)),336px)/336px)}
+.readout{width:210px}.big{height:100px}#num{font-size:92px}#unitLbl{margin-bottom:18px}.big.rpm #num{font-size:50px}.big.rpm #unitLbl{margin-bottom:30px}
+.step{width:48px;height:48px;bottom:10px}.step.minus{left:40px}.step.plus{right:40px}
+.ctl{margin-top:-4px}.node-head em{display:none}.pre b{font-size:14.5px}
+#p-curve .card-h{flex-wrap:wrap}#p-curve .h-act{width:100%;justify-content:space-between}.seg{background:var(--surface)}.pre,.auto-card{background:var(--surface)}.spark{background:var(--surface2)}
+.card{border-radius:22px;padding:16px}
+.savebar.dirty{position:sticky;bottom:calc(90px + env(safe-area-inset-bottom));box-shadow:0 10px 30px -12px rgba(0,0,0,.35)}
+#toast{bottom:calc(92px + env(safe-area-inset-bottom))}
+.dlg{position:absolute;bottom:0;width:100%;border-radius:28px 28px 0 0;padding-bottom:calc(24px + env(safe-area-inset-bottom));animation:up .28s cubic-bezier(.3,.8,.2,1)}
+.tile b{font-size:20px}
+}
+@keyframes up{from{transform:translateY(100%)}}
+.card.grp,.card.rows{padding:4px 0}.card.pts{padding:6px}
+@media(max-width:380px){.tab{font-size:10.5px}.stepper b{min-width:76px;font-size:19px}.pre{padding:0 5px}.pre b{font-size:12px}.pre span{font-size:11px}.pre .r{font-size:10px}}
+</style></head><body>
+<div class="wrap">
+<header class="top">
+<div class="ident"><span class="dev-ico" id="devIco"></span><div class="idt"><div class="status" id="status"></div><button class="dev-name" id="nameBtn" data-a="rename"><span id="nameTxt"></span></button></div></div>
+<nav class="tabs" role="tablist" id="tabs"></nav>
+<div class="hr"><button class="pwr" id="pwr" data-a="power"></button></div>
+</header>
+<div id="banners" role="status"></div>
+<main>
+<section class="panel run" id="p-run" role="tabpanel" aria-labelledby="tab-run">
+<div class="dial-col"><div class="dial-wrap" id="dialWrap">
+<div class="readout"><span class="tag" id="tag"></span><div class="big" id="big"><span id="num"></span><span id="unitLbl"></span></div><button class="sub" id="sub" data-a="swap"></button></div>
+<button class="step minus" data-hold="d:-1" id="minus"></button><div class="env" id="env"></div><button class="step plus" data-hold="d:1" id="plus"></button>
+</div></div>
+<div class="col">
+<div class="card ctl"><div class="seg" id="seg"><i class="ind"></i><button data-a="mode" data-m="0" id="mManual"></button><button data-a="mode" data-m="1" id="mAuto"></button></div><div class="mode-box" id="modeBox"></div></div>
+<div class="card dk"><div class="card-h"><div><b data-t="curve"></b><span id="peekSub"></span></div><button class="link" data-a="go" data-v="curve"><span data-t="edit"></span><i id="peekChev"></i></button></div><svg id="peek" class="graph"></svg></div>
+<div class="card rows dk" id="sumRows"></div>
+</div>
+</section>
+<section class="panel curve" id="p-curve" role="tabpanel" aria-labelledby="tab-curve" hidden>
+<div class="card"><div class="card-h"><div><b data-t="curve"></b><span id="curveSub"></span></div><div class="h-act" id="curveAct"></div></div><svg id="graph" class="graph"></svg><p class="note" id="curveNote"></p></div>
+<div class="col"><div class="card" id="nodeCard"></div><div class="card pts" id="ptList"></div><div class="card savebar" id="saveBar"></div></div>
+</section>
+<section class="panel" id="p-cal" role="tabpanel" aria-labelledby="tab-cal" hidden>
+<div class="card" id="calMain"></div>
+<div class="col"><div class="card" id="calRes"></div><p class="note" data-t="pctNote"></p></div>
+</section>
+<section class="panel" id="p-about" role="tabpanel" aria-labelledby="tab-about" hidden><div class="col" id="aboutA"></div><div class="col" id="aboutB"></div></section>
+</main></div>
+<div id="layer"></div><div id="toast" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),fmt=n=>Number.isFinite(n)?Math.round(n).toLocaleString('en-US'):'—',esc=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const IC={power:'<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',chevR:'<path d="m9 18 6-6-6-6"/>',chevL:'<path d="m15 18-6-6 6-6"/>',
+fan:'<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="1.5"/><path d="M12 10.5c.4-2-.4-3.5-2.4-4.3M10.5 12c-2-.4-3.5.4-4.3 2.4M12 13.5c-.4 2 .4 3.5 2.4 4.3M13.5 12c2 .4 3.5-.4 4.3-2.4"/>',
+spline:'<circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><path d="M5 17A12 12 0 0 1 17 5"/>',sliders:'<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/>',
+thermo:'<path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/>',drop:'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+minus:'<path d="M5 12h14"/>',plus:'<path d="M5 12h14M12 5v14"/>',check:'<path d="M20 6 9 17l-5-5"/>',
+wifi:'<path d="M12 20h.01M2 8.82a15 15 0 0 1 20 0M5 12.859a10 10 0 0 1 14 0M8.5 16.429a5 5 0 0 1 7 0"/>',pencil:'<path d="M21.17 6.81a2.83 2.83 0 0 0-4-4L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/>',
+zap:'<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',globe:'<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',trash:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+refresh:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5"/>',
+alert:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',swap:'<path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16"/>',
+hand:'<path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
+auto:'<path d="M12 3v3M18.36 5.64l-2.12 2.12M21 12h-3M18.36 18.36l-2.12-2.12M12 18v3M7.76 16.24l-2.12 2.12M6 12H3M7.76 7.76 5.64 5.64"/>',
+rotate:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',pulse:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'};
+const ic=(n,s=20,w=2,c='ic')=>`<svg class="${c}" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
+let resetRequested=false,resetNote='';
+let state,lang='zh',draft=null,dirty=false,online=null,manualDirty=false,promptDismissed=false,commandEpoch=0,commandsPending=0,commandQueue=Promise.resolve(),manualRevision=0;
+let rebooting=null,uploading=false,polling=false,pollTimer=0,retryBusy=false,graphDrag=false,dragging=false,dkey='',theme='sys';
+const manual={unit:0,value:0},ui={tab:'run',node:0,cu:0,unit:0};
+const t=k=>words[lang][k]||k;
+const colon=()=>lang==='en'?': ':'：';
+let toastTimer;
+function toast(message,error=false){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').className=message?'show'+(error?' err':''):'';if(message)toastTimer=setTimeout(()=>{$('toast').className='';},error?6000:2400);}
+async function request(payload){
+ const response=await fetch('/control',{method:payload?'POST':'GET',body:payload?new URLSearchParams({data:JSON.stringify(payload)}):undefined,cache:'no-store',headers:payload?{'X-Fan-Request':'1'}:{},signal:AbortSignal.timeout(6000)});
+ if(!response.ok)throw Error(t('rejected'));return await response.json();
+}
+function send(payload,onSuccess){
+ if(resetRequested)return Promise.resolve(false);
+ const epoch=++commandEpoch;commandsPending++;paint();
+ const operation=commandQueue.then(async()=>{try{const next=await request(payload);if(onSuccess)onSuccess();if(epoch===commandEpoch){render(next);toast(t('saved'));}return true;}catch(e){if(epoch===commandEpoch){if(state)render(state);toast(e.message,true);}return false;}finally{commandsPending--;paint();}});
+ commandQueue=operation;return operation;
+}
+function syncManual(s){if(manualDirty)return;manual.unit=s.config.manual_unit;manual.value=s.config.manual;}
+function loadDraft(){draft={points:state.config.points.map(p=>[...p])};dirty=false;}
+function curveOrdered(points){const sorted=[...points].sort((a,b)=>a[0]-b[0]);return sorted.every((p,i)=>!i||p[1]>=sorted[i-1][1]);}
+function curveError(points,max){
+ if(points.length<2||points.length>10||points.some(p=>!Number.isInteger(p[0])||p[0]<0||p[0]>50||!Number.isFinite(p[1])||p[1]<0||p[1]>max)||new Set(points.map(p=>p[0])).size!==points.length)return 'invalid';
+ return curveOrdered(points)?'':'descending';
+}
+function moveNode(points,i,x,o){const n=points.length,tl=i?points[i-1][0]+1:0,th=i<n-1?points[i+1][0]-1:50,ol=i?points[i-1][1]:0,oh=i<n-1?points[i+1][1]:100;points[i][0]=clamp(x,tl,th);points[i][1]=clamp(o,ol,oh);}
+function curveAt(c,x){if(x<=c[0][0])return c[0][1];for(let i=1;i<c.length;i++)if(x<=c[i][0]){const a=c[i-1],b=c[i];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);}return c.at(-1)[1];}
+function insertPoint(points){
+ const sorted=points.map(p=>[...p]).sort((a,b)=>a[0]-b[0]);
+ if(sorted.length>=10||sorted.length<2||!curveOrdered(sorted)||sorted.some((p,i)=>!Number.isInteger(p[0])||p[0]<0||p[0]>50||!Number.isFinite(p[1])||(i&&p[0]===sorted[i-1][0])))return null;
+ let at=-1,gap=1;for(let i=1;i<sorted.length;i++){const d=sorted[i][0]-sorted[i-1][0];if(d>gap){gap=d;at=i;}}
+ if(at<0)return null;
+ const a=sorted[at-1],b=sorted[at],temp=Math.floor((a[0]+b[0])/2);
+ sorted.splice(at,0,[temp,a[1]+(b[1]-a[1])*(temp-a[0])/(b[0]-a[0])]);return sorted;
+}
+function displayCalRpm(rpm,down=false){return (down?Math.floor(rpm/50):Math.ceil(rpm/50))*50;}
+function scaleToOutput(min,v){if(v<=0)return 0;v=clamp(v,1,100);return min+(v-1)*(100-min)/99;}
+function outputToScale(min,o){if(o<=0)return 0;if(o<=min)return 1;return 1+(o-min)*99/(100-min);}
+function rpmFor(scale){
+ if(!valid()||scale<=0)return 0;const c=state.config.cal,pwm=scaleToOutput(c.minimum,scale),table=c.rpm_dense,step=100/(table.length-1);
+ let previousPwm=c.minimum_rpm>0?c.minimum:0,previousRpm=c.minimum_rpm||0;
+ for(let i=1;i<table.length;i++){if(i*step<=previousPwm)continue;const nextRpm=Math.max(previousRpm,table[i]);if(pwm<=i*step)return previousRpm+(nextRpm-previousRpm)*(pwm-previousPwm)/(i*step-previousPwm);previousPwm=i*step;previousRpm=nextRpm;}return previousRpm;
+}
+function pwmFor(rpm){
+ if(rpm<=0)return 0;const c=state.config.cal,table=c.rpm_dense,step=100/(table.length-1);
+ let previousPwm=c.minimum_rpm>0?c.minimum:0,previousRpm=c.minimum_rpm||0;
+ if(rpm<=previousRpm)return outputToScale(c.minimum,previousPwm);
+ for(let i=1;i<table.length;i++){if(i*step<=previousPwm)continue;const nextRpm=Math.max(previousRpm,table[i]);if(rpm<=nextRpm&&nextRpm>previousRpm)return outputToScale(c.minimum,previousPwm+(i*step-previousPwm)*(rpm-previousRpm)/(nextRpm-previousRpm));previousPwm=i*step;previousRpm=nextRpm;}return 100;
+}
+function calibrationText(s){
+ if(s.calibrating)return `${t(s.cal_stage||'calibrating')} · ${Math.round(s.output)}% · ${t('calWaiting')} ${s.cal_wait||0}${t('seconds')}${s.cal_retry?` · ${t('retrying')} ${s.cal_retry}/3`:''}`;
+ if(!s.cal_error){const c=s.config?.cal;return c?.valid&&c.minimum_measured>0?`${t('measuredMinimum')} ${c.minimum_measured}%${c.auto_raised>0?` · ${t('autoRaised').replace('{n}',c.auto_raised)}`:''}`:'';}
+ const context=s.cal_failed_stage?` · ${t(s.cal_failed_stage)} · ${Math.round(s.cal_failed_output)}%`:'';
+ const readings=Array.isArray(s.cal_readings)?` · ${t('recentRpm')}: ${s.cal_readings.map(r=>Number.isFinite(r)?Math.round(r):'—').join(', ')}`:'';
+ return `${t(s.cal_error)}${context}${s.cal_retry?` · ${t('retrying')} ${s.cal_retry}/3`:''}${readings}`;
+}
+const live=()=>online===true&&!resetRequested;
+const valid=()=>!!state?.config.cal.valid,cal=()=>state.config.cal,maxR=()=>Math.floor(cal().rpm[10]/25)*25;
+const manualMode=()=>!state.config.automatic;
+const tempOk=()=>live()&&!state.temp_fault&&Number.isFinite(state.temperature);
+const effUnit=()=>valid()?manual.unit:0;
+const enabledNow=()=>manualDirty&&manualMode()?manual.value>0:state.config.enabled;
+const canDrag=()=>live()&&!state.calibrating&&manualMode();
+const upt=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h} ${t('hr')} ${m} ${t('min')}`:m?`${m} ${t('min')} ${s%60} ${t('sec')}`:`${s} ${t('sec')}`;};
+/* i18n: 'zh|en' */
+const W={title:'智能风扇控制器|Smart Fan Controller',tRun:'运行状态|Status',tCurve:'自动温控|Auto Control',tCal:'风扇校准|Calibration',tAbout:'关于设备|Device',
+online:'已连接|Connected',offShort:'离线|Offline',offT:'与设备的连接已中断|Connection to the device lost',offline:'离线，读数可能已过期|Offline — readings may be stale',offS:'读数可能已过期，正在自动重试…|Readings may be stale. Retrying automatically…',retry:'重试|Retry',sync:'同步中…|Syncing…',
+rebooting:'设备重启中|Device restarting',rebootS:'重启完成后自动重新连接|The page reconnects when the device is back',
+manual:'手动|Manual',auto:'自动|Auto',fanOff:'已关闭|Off',calPending:'待校准|Not calibrated',followCurve:'自动 · 跟随曲线|AUTO · CURVE',calibrating:'校准中|Calibrating',calTag:'校准中|CALIBRATING',
+actual:'实测|Actual',needCal:'按转速调节需先校准|Calibrate to use RPM',stopTag:'停转|STOPPED',
+quiet:'静音|Quiet',std:'标准|Standard',full:'全速|Full',custom:'自定义|Custom',customUnset:'未设置|Not set',customHint:'先调好转速，再长按这里保存|Set a speed first, then press and hold here to save',customOff:'先开启风扇并调好转速|Turn the fan on and set a speed first',customSaved:'已存为自定义|Saved as custom',customCleared:'已清除自定义|Custom cleared',autoRun:'按温控曲线运行|Following the curve',tempNow:'室温|Temp',speedNow:'风速|speed',
+curve:'温控曲线|Temperature curve',edit:'编辑|Edit',switchAuto:'切换到自动|Switch to auto',autoOn:'自动运行中|Auto running',autoOff:'风扇已关闭|Fan off',
+node:'节点|Point',nodes:'个节点|points',temp:'温度|Temperature',speed:'风速|Speed',dragHint:'拖动圆点，或用 −/+ 微调|Drag a point or fine-tune with −/+',add:'添加节点|Add point',remove:'删除|Remove',
+draft:'有未保存修改|Unsaved edits',draftNone:'修改后需保存才会生效|Edits apply after saving',undo:'撤销|Discard',save:'保存并应用|Save & apply',saved:'已保存|Saved',
+noRoom:'两个节点之间需留出至少 1℃ 的空位（最多 10 个节点）|Leave a free whole degree between two points (max 10 points)',
+curveHelp:'温度越高，风速不能越低；百分比与转速依照校准表近似换算。|Higher temperatures never use lower speeds. % and RPM are converted approximately from calibration.',
+calAdvice:'校准建议|Calibration guidance',minimum:'最低转速|Minimum speed',max:'最高转速|Maximum speed',
+calibration:'风扇校准|Fan calibration',calSub:'测量最低稳转档与转速表|Measures minimum stable output and RPM table',notCal:'未校准|Not calibrated',calibrated:'已校准|Calibrated',calError:'校准错误|Calibration error',
+calibrate:'校准风扇|Calibrate fan',recal:'重新校准|Recalibrate',cancel:'取消|Cancel',cancelCal:'取消校准|Cancel calibration',calCancelled:'已取消校准，保留旧结果|Calibration cancelled; previous result kept',calDone:'校准完成|Calibration complete',
+measuredMinimum:'实测最低稳转输出|Measured lowest stable output',autoRaised:'运行中已自动提高最低档 {n}%|Minimum raised automatically by {n}% during use',
+calStepsS:'①满速检查转速信号；②从满速逐档降低，测转速表并找到最低稳转档；③在最低档复核 10 秒。约 2 分钟，过程中风扇会加速、减速和停转。|1. Check the speed signal at full speed. 2. Step down from full speed to measure the RPM table and find the lowest stable output. 3. Verify that output for 10 seconds. About 2 minutes; the fan speeds up, slows down and stops.',
+pctNote:'百分比说明：控制和曲线里的百分比是换算后的档位，0% 关，1% 对应风扇最低稳转档，100% 满速；校准结果里的百分比是实际输出给风扇的 PWM 占空比。|About percentages: percentages in control and curves are a scale — 0% is off, 1% is the fan’s lowest stable speed, 100% is full speed. Percentages in calibration results are the actual PWM duty sent to the fan.',
+calRes:'校准结果|Calibration result',rpmTable:'转速表 · 输出 → 转速|RPM table · output → RPM',calKeep:'关闭网页不会中断校准；完成前保留旧的校准结果。|Closing this page does not stop calibration; the previous result is kept until it finishes.',
+signal:'检查转速信号|Checking speed signal',rpm_table:'测量转速表|Measuring RPM table',verify:'复核最低档|Verifying minimum',saving:'保存结果|Saving',
+output:'输出|Output',calWaiting:'本档等待|Waiting',seconds:'秒|s',retrying:'重试|Retry',recentRpm:'最近转速|Recent RPM',failedAt:'失败位置|Failed at',
+no_rpm:'没有转速信号，请检查接线|No speed signal. Check the wiring.',save_failed:'保存失败，请重试|Save failed. Try again.',calibration_timeout:'校准超时，请重试|Calibration timed out. Try again.',invalid_calibration:'校准结果无效，已保留原设置|Invalid result. Previous settings kept.',
+calFailed:'校准失败|Calibration failed',keptOld:'已保留旧的校准结果。检查风扇 4-pin 接线后可重试。|The previous calibration is kept. Check the 4-pin connection and retry.',
+recalibrateLow:'旧校准未记录低速实测值，请重新校准以获得可靠的低速对应关系。|Recalibrate to measure reliable low-speed values; the previous calibration did not record them.',
+calRequired:'需要先校准，才能获得可靠的百分比与转速对应关系。|Calibrate first to obtain a reliable percentage-to-speed mapping.',
+calSuggest:'建议先校准风扇|Calibrate your fan first',calSuggestS:'校准后可显示对应转速、按 RPM 调节|Unlocks RPM readouts and RPM-based control',goCal:'去校准|Calibrate',view:'查看|View',
+confirmCalT:'开始校准风扇？|Start fan calibration?',confirmCal:'校准将改变风扇转速并进行停转、满速测试。完成前保留旧的校准结果。|Calibration will stop the fan and test full speed. The previous result is kept until it finishes.',startCal:'开始校准|Start',
+firstHelp:'建议先校准风扇，测量最低稳转档和转速表。过程中会加速、减速和停转。也可稍后校准，先使用百分比曲线。转速模式必须校准。|Calibrate to measure the lowest stable output and RPM table. The fan speeds up, slows down and stops. You can skip for now and use percentage curves; RPM mode requires calibration.',later:'稍后校准|Later',
+tempFault:'温度传感器失联|Temperature sensor lost',tempFaultS:'自动温控无法读取温度，请检查传感器连线|Automatic control cannot read the temperature; check the sensor wiring',rpmFault:'转速反馈异常|RPM feedback abnormal',rpmFaultS:'可能停转或反馈断线，请检查风扇与 4-pin 接线|Fan stopped or tachometer disconnected; check the 4-pin cable',saveFault:'保存失败|Save failed',saveFaultS:'设置未能写入存储，重启后可能丢失|Settings could not be stored and may be lost on restart',configFault:'配置错误|Configuration invalid',configFaultS:'存储的配置无效，已使用默认值|Stored configuration is invalid; defaults are in use',
+busy:'校准中，仅可取消或关闭风扇|Calibrating: only cancel or switch off is allowed',rejected:'设备拒绝操作：请检查参数或校准状态|Command rejected: check values or calibration state',autoLocked:'自动模式由曲线调节，切到手动即可拖动|Auto follows the curve; switch to manual to adjust',
+gDevice:'设备|Device',deviceName:'设备名称|Device name',renameDevice:'保存名称|Save name',nameNote:'名称保存在控制器中，网页、App 和 Home Assistant 同步显示。|Stored on the controller and shown in the web page, App and Home Assistant.',
+language:'语言|Language',langT:'更改语言并重启？|Change language and restart?',languageHelp:'切换语言后设备会重启，以更新 HA 名称。OLED 始终中文。|Language changes restart the device to refresh HA names. OLED remains Chinese.',restart:'更改并重启|Change & restart',
+power:'上电行为|Power-on behavior',restore:'恢复上次状态|Restore last state',restoreS:'通电后保持断电前的开关与模式|Keeps the state from before power loss',off:'始终关闭|Always off',offS2:'通电后保持关闭，需要手动开启|Stays off until switched on',autoPower:'开启自动温控|Enable automatic',autoPowerS:'通电后直接按温控曲线运行|Runs the curve right after power-up',powerNote:'设置停电恢复或重新插电后的风扇状态。|What the fan does after power returns.',
+appearance:'外观|Appearance',sys:'跟随系统|System',light:'浅色|Light',dark:'深色|Dark',appNote:'外观只保存在此浏览器。|Saved in this browser only.',
+gFw:'固件|Firmware',version:'固件版本|Firmware',update:'固件升级|Firmware update',updateHelp:'上传本设备对应的 OTA 文件。升级会重启设备，请勿断电。|Upload the matching OTA image. The device will restart. Do not disconnect power.',chooseFile:'选择 .bin 文件|Choose a .bin file',upload:'上传升级|Upload update',uploading:'正在上传|Uploading',unconfirmed:'上传已完成，设备可能正在重启，结果尚未确认。重新连接后请核对固件版本。|Upload finished. The controller may be restarting; the result is not confirmed. Check the firmware version after it reconnects.',updated:'升级完成，设备已重启|Update complete; device restarted',
+network:'网络信息|Network',wifiState:'Wi-Fi 连接|Wi-Fi connection',disconnected:'未连接|Disconnected',ssid:'Wi-Fi 名称|Wi-Fi name',ip:'IP 地址|IP address',wifiSignal:'信号强度|Signal strength',gateway:'网关|Gateway',mac:'MAC 地址|MAC address',ap:'设备热点|Device hotspot',apOn:'已开启|On',apOff:'未开启|Off',pending:'设备暂未提供|Not provided',
+networkHelp:'网页连接表示当前浏览器能否联系设备；Wi-Fi 连接表示设备是否已接入路由器。|Web connection shows browser reachability; Wi-Fi connection shows whether the device is connected to a router.',
+diag:'运行数据|Diagnostics',webConn:'网页连接|Web connection',pwm:'PWM 输出|PWM output',uptime:'运行时间|Uptime',heap:'可用内存|Free memory',
+factoryReset:'恢复出厂设置|Factory reset',resetHelp:'清除 Wi-Fi、设备名称、校准、温控曲线、手动目标、上电行为、语言和其他设备设置。风扇关闭后重启，固件版本不变。之后连接设备热点，在 192.168.4.1 重新配网；App 的设备列表和外观不受影响。|Erase Wi-Fi, device name, calibration, curve, manual targets, power-on behavior, language and other device settings. The fan stops and restarts. Firmware stays installed. Join the device hotspot and open 192.168.4.1 to reconnect. App device lists and appearance are unchanged.',
+resetT:'确定恢复出厂设置？|Factory reset?',resetConfirm:'此操作会清除 Wi-Fi、名称、校准、曲线和全部设备设置，关闭风扇并重启，需要重新配网。当前固件和 App 本地数据不变。此操作不能撤销。|This erases Wi-Fi, name, calibration, curves and all device settings, stops the fan and restarts. Wi-Fi setup is required again. Firmware and local App data stay unchanged. This cannot be undone.',
+resetAccepted:'恢复请求已接受。设备将关闭风扇、清除设置并重启；随后请连接 breezebox- 后接设备编号的热点，访问 192.168.4.1 配网。|Reset request accepted. The fan will stop, erase settings and restart. Then join the breezebox- hotspot ending with the device ID and open 192.168.4.1 to set up Wi-Fi.',resetDone:'已恢复出厂设置|Factory reset in progress',
+resetUncertain:'未能确认恢复结果。请检查设备是否已进入配网热点；不要直接把网络中断当作恢复成功。|Reset result could not be confirmed. Check for the device setup hotspot; a lost connection alone does not prove success.',
+strong:'强|Strong',fair:'中|Fair',weak:'弱|Weak',sec:'秒|s',min:'分|m',hr:'小时|h',close:'关闭|Close',connecting:'连接中…|Connecting…',invalid:'点位需为2～10个；温度须为0～50整数且不能重复，风速须在有效范围内。|Use 2–10 distinct whole-degree temperatures from 0 to 50 and valid speeds.',descending:'温度升高时，风速只能保持或增加，请调整倒挂的点位。|Speed must stay the same or increase as temperature rises.',resetFailed:'设备清除设置失败，请检查设备。|The device could not erase its settings. Please check the device.',updateFailed:'升级失败，设备保持当前固件|Update failed; the device keeps its current firmware',uploadFailed:'上传失败，请重试|Upload failed. Please try again.',installing:'上传完成，设备正在安装并重启…|Upload complete. The device is installing and restarting…'};
+const words={zh:{},en:{}};for(const[k,v]of Object.entries(W)){const p=v.split('|');words.zh[k]=p[0];words.en[k]=p[1]??p[0]}
+
+/* end i18n */
+/* ---- rendering helpers ---- */
+let pressing=false;/* hold DOM rebuilds while a button is pressed so the click lands on the same element */
+const setH=(el,h)=>{if(el._h!==h&&!(pressing&&el.contains(pressing))){el._h=h;el.innerHTML=h}};
+document.addEventListener('pointerdown',e=>{pressing=e.target.closest('[data-a]')||false},true);
+addEventListener('pointerup',()=>setTimeout(()=>pressing=false,0),true);
+const TABS=[['run','fan','tRun'],['curve','spline','tCurve'],['cal','target','tCal'],['about','sliders','tAbout']];
+function translate(){document.documentElement.lang=lang==='en'?'en':'zh-CN';document.querySelectorAll('[data-t]').forEach(e=>e.textContent=t(e.dataset.t));
+ $('tabs').innerHTML=TABS.map(([k,i,l])=>`<button class="tab" role="tab" id="tab-${k}" aria-controls="p-${k}" data-a="go" data-v="${k}" aria-selected="${ui.tab===k}" tabindex="${ui.tab===k?0:-1}">${ic(i,20)}<span>${t(l)}</span></button>`).join('');
+ $('mManual').innerHTML=ic('hand',18)+t('manual');$('mAuto').innerHTML=ic('auto',18)+t('auto');$('dial').setAttribute('aria-label',t('speed'));$('nameBtn').setAttribute('aria-label',t('deviceName'));$('pwr').setAttribute('aria-label',t('power'));$('minus').setAttribute('aria-label','-');$('plus').setAttribute('aria-label','+');}
+function render(s){
+ if(resetRequested){
+  if(s.error==='factory_reset_failed'){resetRequested=false;resetNote='resetFailed';}
+  else return;
+ }
+ const previousLang=lang,previousCal=JSON.stringify(state?.config.cal);
+ state=s;online=true;lang=s.config.english?'en':'zh';
+ if(previousLang!==lang)translate();
+ if(rebooting&&(rebooting.sawOffline||Date.now()-rebooting.at>45000)){const done=rebooting.done;rebooting=null;if(done)toast(t(done)+(done==='unconfirmed'&&state.version?' '+t('version')+': '+state.version:''),done==='unconfirmed');}
+ syncManual(s);
+ if(!draft||(!dirty&&JSON.stringify(draft.points)!==JSON.stringify(s.config.points)))loadDraft();
+ ui.node=clamp(ui.node,0,draft.points.length-1);
+ if(previousCal&&previousCal!==JSON.stringify(s.config.cal)&&!valid())ui.cu=0,ui.unit=0;
+ paint();
+}
+function paint(){
+ const on=live(),c=state?.config;
+ const [cls,txt]=resetRequested?['off',t('resetDone')]:online===null?['off',t('connecting')]:!online?(rebooting?['warn',t('rebooting')]:['off',t('offShort')]):state.calibrating?['warn',`${t('calibrating')} ${Math.round(state.progress)}%`]:commandsPending?['sync',t('sync')]:['',`${t('online')} · ${state.ip||'—'}`];
+ setH($('status'),`<i class="dot ${cls}"></i>${esc(txt)}`);
+ const hasName=!!state;$('nameTxt').textContent=hasName?(state.name||'PWM 风扇'):t('title');document.title=state?.name||t('title');
+ $('devIco').className='dev-ico'+(on&&c.enabled?'':' off');$('pwr').className='pwr'+(on&&c.enabled?' on':'');$('pwr').disabled=!on;$('pwr').setAttribute('aria-pressed',String(!!(on&&c.enabled)));
+ document.querySelectorAll('.tab').forEach(b=>{const a=b.dataset.v===ui.tab;b.setAttribute('aria-selected',String(a));b.tabIndex=a?0:-1});
+ TABS.forEach(([k])=>$('p-'+k).hidden=ui.tab!==k);
+ banners();
+ $('p-run').classList.toggle('dim',!on);
+ if(!state)return;
+ if(ui.tab==='run')renderRun();else if(ui.tab==='curve')renderCurve();else if(ui.tab==='cal')renderCal();else renderAbout();
+ if(c.automatic&&!c.cal.valid&&!c.prompt_seen&&!state.calibrating&&!promptDismissed&&!dl&&online)firstPrompt(false);
+}
+function bn(k,i,b,s,btn){return `<div class="banner ${k}">${ic(i,22)}<div class="bn-main"><b>${b}</b>${s?`<span>${s}</span>`:''}</div>${btn||''}</div>`}
+function banners(){let h='';
+ if(resetRequested)h=bn('info','refresh',t('resetDone'),t('resetAccepted'));
+ else if(online===false)h=rebooting?bn('info','refresh',t('rebooting'),t('rebootS')):bn('','alert',t('offT'),t('offS'),`<button class="bn-btn" data-a="reconnect" ${retryBusy?'disabled':''}>${retryBusy?'…':t('retry')}</button>`);
+ else if(state){
+  if(state.calibrating&&ui.tab!=='cal')h+=bn('info','target',`<span id="bnCT"></span>`,`<span id="bnCS"></span><div class="pbar"><i id="bnCB"></i></div>`,`<button class="bn-btn" data-a="go" data-v="cal">${t('view')}</button>`);
+  else if(state.cal_error&&ui.tab!=='cal')h+=bn('err','alert',`${t('calFailed')} · ${t(state.cal_error)}`,t('keptOld'),`<button class="bn-btn" data-a="go" data-v="cal">${t('view')}</button>`);
+  else if(!valid()&&!state.calibrating&&(ui.tab==='run'||ui.tab==='curve'||ui.tab==='cal'))h+=bn('info','target',t('calSuggest'),t('calSuggestS'),`<button class="bn-btn" data-a="go" data-v="cal">${t('goCal')}</button>`);
+  const F=[['temp_fault','tempFault'],['rpm_fault','rpmFault'],['save_fault','saveFault'],['config_fault','configFault']].filter(([f])=>state[f]).map(x=>x[1]);
+  if(F.length)h+=bn('','alert',F.map(t).join(' · '),F.length>1?F.map(k=>t(k+'S')).join('；'):t(F[0]+'S'));}
+ setH($('banners'),h);
+ if($('bnCT')){const p=Math.max(0,Math.min(100,Math.round(state.progress)));$('bnCT').textContent=`${t('calibrating')} · ${p}%`;$('bnCS').textContent=`${t(state.cal_stage||'calibrating')} · ${t('output')} ${Math.round(state.output)}%`;$('bnCB').style.width=p+'%'}}
+/* ---- dial ---- */
+const R=128,CIRC=2*Math.PI*R,ARC=CIRC*.75,NT=49,pol=(r,a)=>{const x=a*Math.PI/180;return `${(r*Math.cos(x)).toFixed(1)},${(r*Math.sin(x)).toFixed(1)}`};
+const blade=a=>`M${pol(26,a)} Q${pol(62,a-6)} ${pol(96,a-34)} A96,96 0 0,0 ${pol(96,a-60)} Q${pol(60,a-40)} ${pol(26,a-30)}Z`;
+function buildDial(){let tk='',bl='';for(let i=0;i<NT;i++){const a=(135+270*i/(NT-1))*Math.PI/180,mj=i%12===0,r1=mj?141:145;tk+=`<line class="d-tick${mj?' mj':''}" x1="${(160+r1*Math.cos(a)).toFixed(1)}" y1="${(160+r1*Math.sin(a)).toFixed(1)}" x2="${(160+151*Math.cos(a)).toFixed(1)}" y2="${(160+151*Math.sin(a)).toFixed(1)}"/>`}
+ for(let i=0;i<9;i++)bl+=`<path d="${blade(i*40)}"/>`;
+ const ring=(id,cl,x)=>`<circle ${id?`id="${id}"`:''} class="${cl}" cx="160" cy="160" r="${R}" fill="none" stroke-width="14" stroke-linecap="round" transform="rotate(135 160 160)" ${x}/>`;
+ $('dialWrap').insertAdjacentHTML('afterbegin',`<svg id="dial" viewBox="0 0 320 320" role="img"><defs><linearGradient id="dg" gradientUnits="userSpaceOnUse" x1="290" y1="0" x2="40" y2="0"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent2)"/></linearGradient><filter id="dglow" x="-25%" y="-25%" width="150%" height="150%"><feGaussianBlur stdDeviation="8"/></filter><filter id="ksh" x="-80%" y="-80%" width="260%" height="260%"><feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity=".35"/></filter></defs><g>${tk}</g><circle class="d-disc" cx="160" cy="160" r="110"/><g transform="translate(160 160)"><g id="dBlades"><g class="d-blades">${bl}</g><circle class="d-hub" r="26"/></g></g>${ring('','d-track',`stroke-dasharray="${ARC} ${CIRC}"`)}${ring('dGlow','d-glow',`stroke="url(#dg)" filter="url(#dglow)" stroke-dasharray="0 ${CIRC}"`)}${ring('dArc','',`stroke="url(#dg)" stroke-dasharray="0 ${CIRC}"`)}<g id="dKnob" class="d-knob"><circle r="15" fill="#fff" filter="url(#ksh)"/><circle r="5" style="fill:var(--accent)"/></g></svg>`);
+ $('minus').innerHTML=ic('minus',20,2.4);$('plus').innerHTML=ic('plus',20,2.4);$('pwr').innerHTML=ic('power',23,2.2);$('devIco').innerHTML=ic('fan',26);$('nameBtn').insertAdjacentHTML('beforeend',ic('pencil',16));$('peekChev').outerHTML=ic('chevR',15,2.4)}
+function dUnit(){return state.calibrating||!valid()?0:!enabledNow()?ui.unit:manualMode()?manual.unit:ui.unit}
+function dialVal(){if(state.calibrating)return state.output;if(!enabledNow())return 0;if(manualMode())return manual.value;return dUnit()?rpmFor(state.target):state.target}
+let disp=0,spin=0,angle=0,last=performance.now(),lit=-2;const rm=matchMedia('(prefers-reduced-motion: reduce)');
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;requestAnimationFrame(frame);
+ if(ui.tab!=='run')return;
+ if(!state){readout(0,0);return}
+ const lv=live(),u=dUnit(),mx=u?maxR():100,v=lv?dialVal():0;
+ if(dragging)disp=v;else{disp+=(v-disp)*Math.min(1,dt*7);if(Math.abs(v-disp)<mx*.003)disp=v}
+ const full=valid()&&cal().rpm[10]>0?cal().rpm[10]:2000,r=Number.isFinite(state.rpm)?state.rpm:0;spin+=(r/full*100-spin)*Math.min(1,dt*1.3);if(!rm.matches)angle=(angle+spin*2.16*dt)%360/* clockwise */;
+ const p=lv?clamp(disp/mx,0,1):0,sh=p>.004?1:0,arc=$('dArc');
+ arc.setAttribute('stroke-dasharray',`${(ARC*p).toFixed(1)} ${CIRC}`);arc.style.opacity=sh;$('dGlow').setAttribute('stroke-dasharray',`${(ARC*p).toFixed(1)} ${CIRC}`);$('dGlow').style.opacity=sh?'':0;
+ const th=(135+270*p)*Math.PI/180;$('dKnob').setAttribute('transform',`translate(${(160+R*Math.cos(th)).toFixed(1)} ${(160+R*Math.sin(th)).toFixed(1)})`);$('dBlades').setAttribute('transform',`rotate(${angle.toFixed(1)})`);
+ const l=sh?Math.round(p*(NT-1)):-1;if(l!==lit){document.querySelectorAll('.d-tick').forEach((e,i)=>e.classList.toggle('on',i<=l));lit=l}
+ readout(u,dragging?v:Math.round(u?disp/25:disp)*(u?25:1))}
+function readout(u,v){let txt='',num='',unit='',sub='',tag='',cl='',sw=0;
+ if(!live()){txt=rebooting?t('rebooting'):online===null?t('connecting'):t('offShort');sub=`<b>—</b>`}
+ else if(!enabledNow()&&!state.calibrating){txt=t('fanOff');sub=valid()?`<b>0</b> ${u?'RPM':'%'}${ic('swap',14)}`:t('calPending')}
+ else{const pct=u?pwmFor(v):v,rp=`${t('actual')} <b>${fmt(state.rpm)}</b> RPM`;
+  if(u){num=fmt(v);unit='RPM';cl='rpm';sub=`${Math.round(pct)}% · ${rp}`}else{num=Math.round(v);unit='%';sub=rp}
+  sub=`<i class="live"></i>`+sub+(valid()&&!state.calibrating?ic('swap',14):'');sw=state.rpm_fault;
+  if(state.calibrating)tag=t('calTag');else if(!manualMode())tag=t('followCurve');else if(v<=0)tag=t('stopTag')}
+ const k=[txt,num,unit,sub,tag,cl,sw,lang].join('|');if(k===dkey)return;dkey=k;
+ $('big').className='big '+(txt?'txt':cl);$('num').textContent=txt||num;$('unitLbl').textContent=txt?'':unit;$('sub').innerHTML=sub;$('sub').className='sub'+(sw?' warn':'');$('tag').textContent=tag;$('tag').className='tag';$('dial').setAttribute('aria-label',`${t('speed')}: ${txt||num+' '+unit}`)}
+function setFromPt(e,first){const r=$('dial').getBoundingClientRect(),dx=(e.clientX-r.left)*320/r.width-160,dy=(e.clientY-r.top)*320/r.height-160;if(first&&(Math.hypot(dx,dy)<95||Math.hypot(dx,dy)>170))return false;
+ let a=Math.atan2(dy,dx)*180/Math.PI;if(a<0)a+=360;const rel=(a-135+360)%360,u=effUnit(),mx=u?maxR():100;
+ const p=rel>270?(first?(rel>315?0:1):(manual.value>=mx/2?1:0)):rel/270;
+ manual.unit=u;manual.value=u?Math.round(p*mx/25)*25:Math.round(p*100);manualDirty=true;manualRevision++;return true}
+function bindDial(){const svg=$('dial');
+ svg.addEventListener('touchstart',e=>{if(canDrag()&&setFromPt(e.touches[0],1))e.preventDefault()},{passive:false});
+ svg.addEventListener('pointerdown',e=>{if(!live())return;if(state.calibrating)return toast(t('busy'),true);if(!manualMode())return toast(t('autoLocked'));if(!setFromPt(e,1))return;dragging=true;svg.setPointerCapture(e.pointerId);paint()});
+ svg.addEventListener('pointermove',e=>{if(dragging){setFromPt(e,0);renderRun()}});
+ const end=()=>{if(!dragging)return;dragging=false;applyManual()};svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end)}
+function applyManual(){
+ const unit=effUnit(),value=manual.value;
+ if(!Number.isFinite(value)||value<0||value>(unit?maxR():100))return toast(t('rejected'),true);
+ if(unit===1&&!state.config.cal.valid)return toast(t('needCal'),true);
+ const revision=manualRevision;
+ return send({op:'manual',unit,value},()=>{if(revision===manualRevision)manualDirty=false;}).then(ok=>{if(!ok&&revision===manualRevision){manualDirty=false;syncManual(state);paint();}return ok;});
+}
+/* ---- run panel ---- */
+function renderRun(){const c=state.config,on=live();
+ $('dialWrap').classList.toggle('locked',!canDrag());
+ $('seg').dataset.v=+c.automatic;$('mManual').className=c.automatic?'':'act';$('mAuto').className=c.automatic?'act':'';
+ const tv=tempOk()?Math.round(state.temperature):null;
+ setH($('env'),`${ic('thermo',15,2,'ic t')}<span class="${tempOk()||!on?'':'warn'}">${tv==null?'—':tv+'°C'}</span><i></i>${ic('drop',15,2,'ic h')}<span>${on&&Number.isFinite(state.humidity)?Math.round(state.humidity)+'%':'—'}</span>`);
+ const cur=manualMode()?(manual.unit&&valid()?pwmFor(manual.value):manual.value):-1,en=enabledNow();
+ const cv=c.custom,cu=c.custom_unit,cr=valid()?cu?cv:rpmFor(cv):0;
+ setH($('modeBox'),manualMode()?`<div class="presets">${[['quiet',25],['std',50],['full',100]].map(([k,v])=>{const rp=valid()?rpmFor(v):0;return `<button class="pre${en&&Math.abs(cur-v)<.6?' act':''}" data-a="preset" data-v="${v}"><b>${t(k)}</b><span>${v}%${rp>0?`<em> · </em><span class="r">${fmt(displayCalRpm(rp,v===100))} RPM</span>`:''}</span></button>`}).join('')}<button class="pre${en&&cv>0&&manual.unit===cu&&Math.abs(manual.value-cv)<.6?' act':''}" data-a="custom"><b>${t('custom')}</b><span>${cv?cu?`${fmt(cv)} RPM`:`${cv}%`:t('customUnset')}${cr>0?`<em> · </em><span class="r">${fmt(displayCalRpm(cr))} RPM</span>`:''}</span></button></div>`
+  :`<button class="auto-card" data-a="go" data-v="curve">${spark(76,44)}<div class="ac-t"><b>${t('autoRun')}</b><span>${autoLine()}</span></div>${ic('chevR',18)}</button>`);
+ {const q=c.points;$('peekSub').textContent=`${q.length} ${t('nodes')} · ${q[0][0]}–${q.at(-1)[0]}°C → ${Math.round(q[0][1])}–${Math.round(q.at(-1)[1])}%`}if(!graphDrag)drawCurve($('peek'),c.points,0);
+ const r=(i,k,v,a,x)=>`<button class="row" data-a="${a}" ${x||''}><span class="ri">${ic(i,17)}</span><span class="rt">${t(k)}</span><span class="rv">${v}</span><span class="chev">${ic('chevR',16)}</span></button>`;
+ setH($('sumRows'),r('target','tCal',state.calibrating?`${t('calibrating')} ${Math.round(state.progress)}%`:valid()?`${t('calibrated')} · ${t('max')} ${fmt(displayCalRpm(cal().rpm[10],true))} RPM`:`<span style="color:var(--warn)">${t('notCal')}</span>`,'go','data-v="cal"')+r('wifi','network',on&&state.ssid?`${esc(state.ssid)}${Number.isFinite(state.rssi)?' · '+bars(state.rssi):''}`:'—','go','data-v="about"')+r('zap','power',t(['restore','off','autoPower'][c.power]||'restore'),'powerDlg'))}
+function autoLine(){if(!tempOk())return t('tempFault');const c=state.config,tp=Math.round(state.temperature),p=curveAt(c.points,state.temperature);return `${t('tempNow')} ${tp}°C → ${t('speedNow')} ${Math.round(p)}%`+(valid()&&p>0?` · ${fmt(displayCalRpm(rpmFor(p)))} RPM`:'')}
+function spark(w,h){const c=state.config.points,X=x=>4+x/50*(w-8),Y=o=>4+(1-o/100)*(h-8),pts=[[X(0),Y(c[0][1])],...c.map(p=>[X(p[0]),Y(p[1])]),[X(50),Y(c.at(-1)[1])]],tv=tempOk()?state.temperature:null;
+ return `<svg class="spark mb" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="M${pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' L')}" fill="none" style="stroke:var(--accent)" stroke-width="2" stroke-linejoin="round"/>${tv!=null?`<circle cx="${X(clamp(tv,0,50))}" cy="${Y(curveAt(c,tv))}" r="3.5" style="fill:var(--warm)"/>`:''}</svg>`}
+function bars(r){const n=r>=-55?4:r>=-65?3:r>=-75?2:1;return `<span class="bars">${[4,7,10,13].map((h,i)=>`<i class="${i<n?'on':''}" style="height:${h}px"></i>`).join('')}</span>`}
+/* ---- curve graph (shared by preview + editor) ---- */
+let G=null;
+const cuOn=()=>ui.cu&&valid();
+function drawCurve(svg,c,edit){const w=Math.round(svg.getBoundingClientRect().width)||560,h=edit?Math.round(clamp(w*.56,240,400)):Math.round(clamp(w*.4,150,210)),rpmAx=edit&&cuOn();
+ const g={L:rpmAx?50:36,R:w-12,T:edit?34:30,B:h-26};if(edit)G=g;const gx=x=>g.L+x/50*(g.R-g.L),gy=o=>g.T+(1-o/100)*(g.B-g.T);
+ let s=`<defs><linearGradient id="ga${edit}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.3"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></linearGradient></defs>`;
+ for(const o of [0,25,50,75,100])s+=`<line class="g-grid" x1="${g.L}" x2="${g.R}" y1="${gy(o)}" y2="${gy(o)}"/><text class="g-lbl" x="${g.L-8}" y="${gy(o)+4}" text-anchor="end">${rpmAx?(o?fmt(displayCalRpm(rpmFor(o),o===100)):0):o+(o===100?'%':'')}</text>`;
+ for(let x=0;x<=50;x+=10)s+=`<text class="g-lbl" x="${gx(x)}" y="${g.B+18}" text-anchor="middle">${x}°C</text>`;
+ const pts=[[gx(0),gy(c[0][1])],...c.map(p=>[gx(p[0]),gy(p[1])]),[gx(50),gy(c.at(-1)[1])]],line='M'+pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' L');
+ s+=`<path d="${line} L${g.R},${g.B} L${g.L},${g.B} Z" fill="url(#ga${edit})"/><path class="g-line" d="${line}"/>`;
+ const node=(p,i)=>{const x=gx(p[0]),y=gy(p[1]);return edit&&i===ui.node?`<circle cx="${x}" cy="${y}" r="16" class="g-halo"/><circle cx="${x}" cy="${y}" r="8" class="g-sel"/>`:`<circle cx="${x}" cy="${y}" r="${edit?6:4}" class="g-node"/>`};
+ if(tempOk()){const tv=state.temperature,nx=gx(clamp(tv,0,50)),ny=gy(curveAt(c,tv)),lw=lang==='en'?62:70,lx=clamp(nx,g.L+lw/2,g.R-lw/2);s+=`<line class="g-now" x1="${nx}" x2="${nx}" y1="${g.T}" y2="${g.B}"/><rect class="g-now-pill" x="${lx-lw/2}" y="${g.T-25}" width="${lw}" height="19" rx="9.5"/><text class="g-now-t" x="${lx}" y="${g.T-11.5}" text-anchor="middle">${t('tempNow')} ${Math.round(tv)}°C</text>`;
+  c.forEach((p,i)=>s+=node(p,i));s+=`<circle cx="${nx}" cy="${ny}" r="5" class="g-now-dot"/>`}
+ else c.forEach((p,i)=>s+=node(p,i));
+ if(edit&&graphDrag){const p=c[ui.node],x=clamp(gx(p[0]),g.L+44,g.R-44),y=gy(p[1])-32<4?gy(p[1])+24:gy(p[1])-32;s+=`<rect class="g-bub" x="${x-44}" y="${y-11}" width="88" height="22" rx="11"/><text class="g-bub-t" x="${x}" y="${y+4}" text-anchor="middle">${p[0]}°C · ${spd(p[1],1)}</text>`}
+ svg.setAttribute('viewBox',`0 0 ${w} ${h}`);svg.style.height=h+'px';svg.innerHTML=s}
+const spd=(p,plain)=>cuOn()?(p<=0?(plain?'0 RPM':`0<u>RPM</u>`):(plain?fmt(rpmFor(p))+' RPM':`${fmt(rpmFor(p))}<u>RPM</u>`)):(plain?Math.round(p)+'%':`${Math.round(p)}<u>%</u>`);
+function bindGraph(){const g=$('graph');
+ g.addEventListener('pointerdown',e=>{if(!live()||state.calibrating)return toast(t(live()?'busy':'offline'),true);const r=g.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;let bi=-1,bd=1e9;
+  draft.points.forEach((p,i)=>{const d=Math.hypot(G.L+p[0]/50*(G.R-G.L)-px,G.T+(1-p[1]/100)*(G.B-G.T)-py);if(d<bd){bd=d;bi=i}});if(bd>30)return;ui.node=bi;graphDrag=true;g.setPointerCapture(e.pointerId);renderCurve()});
+ g.addEventListener('pointermove',e=>{if(!graphDrag)return;const r=g.getBoundingClientRect();moveNode(draft.points,ui.node,Math.round((e.clientX-r.left-G.L)/(G.R-G.L)*50),Math.round((1-(e.clientY-r.top-G.T)/(G.B-G.T))*100));dirty=true;renderCurve()});
+ const end=()=>{if(graphDrag){graphDrag=false;renderCurve()}};g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end)}
+function renderCurve(){const c=state.config,ed=live()&&!state.calibrating,dis=ed?'':'disabled',D=draft.points;
+ $('curveSub').textContent=autoLine();
+ setH($('curveAct'),(valid()?`<div class="chips"><button class="chip${cuOn()?'':' act'}" data-a="cu" data-v="0">%</button><button class="chip${cuOn()?' act':''}" data-a="cu" data-v="1">RPM</button></div>`:'')+(!live()?`<span class="pill mute">${t('offShort')}</span>`:c.automatic&&c.enabled?`<span class="pill">${t('autoOn')}</span>`:c.automatic?`<span class="pill mute">${t('autoOff')}</span>`:`<button class="pill-btn" data-a="mode" data-m="1">${t('switchAuto')}</button>`));
+ drawCurve($('graph'),D,1);
+ setH($('curveNote'),valid()?`<span class="adv">${ic('target',15)}${t('calAdvice')}${colon()}${t('minimum')} ≈ ${fmt(displayCalRpm(rpmFor(1)))} RPM · ${t('max')} ≈ ${fmt(displayCalRpm(cal().rpm[10],true))} RPM</span>`:t('curveHelp'));
+ const n=D[ui.node];
+ setH($('nodeCard'),`<div class="node-head"><div><b>${t('node')} ${ui.node+1}</b><span> / ${D.length}<em class="hint"> · ${t('dragHint')}</em></span></div><div style="display:flex"><button class="icon-btn" data-a="nsel" data-v="-1" ${ui.node?'':'disabled'} aria-label="prev">${ic('chevL',18)}</button><button class="icon-btn" data-a="nsel" data-v="1" ${ui.node<D.length-1?'':'disabled'} aria-label="next">${ic('chevR',18)}</button><button class="icon-btn del" data-a="del" ${D.length<=2||!ed?'disabled':''} aria-label="${t('remove')}">${ic('trash',18)}</button></div></div>
+ <div class="node-row"><span>${t('temp')}<small>0–50°C</small></span><div class="stepper"><button data-hold="t:-1" ${dis} aria-label="-">${ic('minus',16,2.4)}</button><b id="ndT"></b><button data-hold="t:1" ${dis} aria-label="+">${ic('plus',16,2.4)}</button></div></div>
+ <div class="node-row"><span>${t('speed')}<small id="ndS"></small></span><div class="stepper"><button data-hold="o:-1" ${dis} aria-label="-">${ic('minus',16,2.4)}</button><b id="ndO"></b><button data-hold="o:1" ${dis} aria-label="+">${ic('plus',16,2.4)}</button></div></div>`);
+ $('ndT').innerHTML=n[0]+'<u>°C</u>';$('ndO').innerHTML=spd(n[1]);const ns=$('ndS');ns.className='';ns.textContent=cuOn()?Math.round(n[1])+'%':valid()&&n[1]>0?'≈ '+fmt(rpmFor(n[1]))+' RPM':'0–100%';
+ setH($('ptList'),`<div class="pt head"><i>#</i><span>${t('temp')}</span><span>${t('speed')}</span><em>${valid()?'≈ RPM':''}</em></div>`+D.map((p,i)=>`<button class="pt${i===ui.node?' act':''}" data-a="nsel" data-i="${i}"><i>${i+1}</i><span>${p[0]}°C</span><span>${Math.round(p[1])}%</span><em>${valid()?(p[1]>0?fmt(rpmFor(p[1])):'0'):''}</em></button>`).join('')+`<button class="add-node" data-a="addPt" ${D.length>=10||!ed?'disabled':''}>${ic('plus',18)}${t('add')}</button>`);
+ $('saveBar').classList.toggle('dirty',dirty);setH($('saveBar'),`<p class="${dirty?'warn':''}">${t(dirty?'draft':'draftNone')}</p><button class="btn ghost" data-a="undo" ${dirty?'':'disabled'}>${t('undo')}</button><button class="btn" data-a="saveCurve" ${dirty&&ed?'':'disabled'}>${t('save')}</button>`)}
+/* ---- calibration panel ---- */
+const STAGES=['signal','rpm_table','verify','saving'];
+function renderCal(){const c=cal(),on=live(),s=state;let h=`<div class="card-h"><div><b>${t('calibration')}</b><span>${t('calSub')}</span></div>${calPill()}</div>`;
+ if(s.calibrating){const si=STAGES.indexOf(s.cal_stage);h+=`<div id="calLive"></div>
+  <div class="stages">${STAGES.map((k,i)=>`<div class="st ${i<si?'done':i===si?'active':'pend'}"><span class="sd">${i<si?ic('check',12,3):''}</span>${t(k)}</div>`).join('')}</div>
+  <button class="btn danger" data-a="cancelCal" ${on?'':'disabled'}>${t('cancelCal')}</button><p class="note">${t('calKeep')}</p>`}
+ else if(s.cal_error){const si=STAGES.indexOf(s.cal_failed_stage);
+  h+=`<div class="cal-hero err">${ic('alert',46,1.8)}</div><div class="errbox"><b>${t('calFailed')}</b>${esc(calibrationText(s))}</div>
+  <div class="stages" style="margin-top:12px">${STAGES.map((k,i)=>`<div class="st ${i<si?'done':i===si?'fail':'pend'}"><span class="sd">${i<si?ic('check',12,3):i===si?ic('x',12,3):''}</span>${t(k)}</div>`).join('')}</div>
+  <p class="note">${t('keptOld')}</p><button class="btn" data-a="calStart" ${on?'':'disabled'}>${ic('refresh',18,2.4)}${t('retry')}</button>`}
+ else{const msg=c.valid?(c.minimum_rpm?calibrationText(s):t('recalibrateLow')):t('calRequired');
+  h+=`<div class="cal-hero${c.valid?'':' warn'}">${ic('target',50,1.6)}</div><p class="cal-msg">${t(c.valid?'calibrated':'notCal')}</p><p class="note">${esc(msg)}</p><p class="note">${t('calStepsS')}</p><button class="btn" data-a="calStart" ${on?'':'disabled'}>${t(c.valid?'recal':'calibrate')}</button>`}
+ setH($('calMain'),h);calLive();
+ const tile=(k,p,r)=>`<div class="tile"><small>${t(k)}</small><b>${c.valid?Number(p.toFixed(2)):'—'}<u>%</u></b><span>${c.valid?'≈ '+fmt(r)+' RPM':t('notCal')}</span></div>`;
+ setH($('calRes'),`<div class="card-h"><div><b>${t('calRes')}</b></div></div><div class="tiles">${tile('minimum',c.minimum,c.minimum_rpm)}${tile('max',c.maximum,displayCalRpm(c.rpm[10],true))}</div>${c.valid||s.calibrating?`<p class="note" style="margin:16px 0 6px">${t('rpmTable')}</p><svg id="calChart" class="graph"></svg>`:''}`);
+ drawCal()}
+function calLive(){const e=$('calLive');if(!e)return;const p=Math.max(0,Math.min(100,state.progress)),C=2*Math.PI*72;setH(e,`<div class="cal-ring"><svg viewBox="0 0 170 170" width="170" height="170"><defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent2)"/></linearGradient></defs><circle cx="85" cy="85" r="72" fill="none" style="stroke:var(--surface2)" stroke-width="12"/><circle cx="85" cy="85" r="72" fill="none" stroke="url(#cg)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(C*p/100).toFixed(1)} ${C}" transform="rotate(-90 85 85)"/></svg><div class="cn">${Math.round(p)}<u>%</u></div></div>
+  <div class="livechips"><span>${t('output')} <b>${fmt(state.output)}%</b></span><span>${t('actual')} <b>${fmt(state.rpm)}</b> RPM</span><span>${t('calWaiting')} <b>${state.cal_wait||0}</b> ${t('seconds')}</span>${state.cal_retry?`<span>${t('retrying')} <b>${state.cal_retry}/3</b></span>`:''}</div>`)}
+function calPill(){return state.calibrating?`<span class="pill warn">${t('calibrating')}</span>`:state.cal_error?`<span class="pill err">${t('calError')}</span>`:valid()?`<span class="pill">${t('calibrated')}</span>`:`<span class="pill warn">${t('notCal')}</span>`}
+function drawCal(){const svg=$('calChart');if(!svg)return;const w=Math.round(svg.getBoundingClientRect().width)||320,h=Math.round(clamp(w*.42,150,220)),c=cal(),tb=c.rpm_dense,mx=Math.max(500,Math.ceil(Math.max(c.rpm[10],state.calibrating&&Number.isFinite(state.rpm)?state.rpm:0)/500)*500),g={L:44,R:w-10,T:12,B:h-24},gx=o=>g.L+o/100*(g.R-g.L),gy=r=>g.B-r/mx*(g.B-g.T);
+ let s='';for(let r=0;r<=mx;r+=500)s+=`<line class="g-grid" x1="${g.L}" x2="${g.R}" y1="${gy(r)}" y2="${gy(r)}"/><text class="g-lbl" x="${g.L-8}" y="${gy(r)+4}" text-anchor="end">${fmt(r)}</text>`;
+ for(let o=0;o<=100;o+=25)s+=`<text class="g-lbl" x="${gx(o)}" y="${g.B+17}" text-anchor="middle">${o}%</text>`;
+ if(valid()){const pts=tb.map((r,i)=>[gx(i*100/(tb.length-1)),gy(r)]),d='M'+pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' L');s+=`<path d="${d} L${g.R},${g.B} L${g.L},${g.B}Z" fill="var(--accent-soft)"/><path class="g-line" d="${d}"/><circle class="g-node" cx="${gx(c.minimum)}" cy="${gy(c.minimum_rpm||0)}" r="4.5"/><circle class="g-node" cx="${gx(100)}" cy="${gy(c.rpm[10])}" r="4.5"/>`}
+ if(state.calibrating&&live()&&Number.isFinite(state.output))s+=`<circle class="g-live" cx="${gx(clamp(state.output,0,100))}" cy="${gy(clamp(state.rpm||0,0,mx))}" r="6"/>`;
+ svg.setAttribute('viewBox',`0 0 ${w} ${h}`);svg.style.height=h+'px';svg.innerHTML=s}
+/* ---- about panel ---- */
+function renderAbout(){const c=state.config,on=live(),busy=!on||state.calibrating,s=state;
+ const row=(a,i,k,v,o={})=>`<button class="row${o.danger?' danger':''}" data-a="${a}" ${o.dis?'disabled':''}><span class="ri">${ic(i,17)}</span><span class="rt">${t(k)}</span>${v!=null?`<span class="rv">${v}</span>`:''}${o.danger?'':`<span class="chev">${ic('chevR',16)}</span>`}</button>`;
+ const kv=(k,v)=>`<div class="row kv"><span class="rt">${t(k)}</span><span class="rv">${v}</span></div>`,P=v=>on?(v?esc(v):t('pending')):'—';
+ setH($('aboutA'),`<div class="grp-lbl">${t('gDevice')}</div><div class="card grp">${row('rename','pencil','deviceName',esc(s.name||'PWM 风扇'),{dis:busy})}${row('langDlg','globe','language',c.english?'English':'中文',{dis:busy})}${row('powerDlg','zap','power',t(['restore','off','autoPower'][c.power]||'restore'),{dis:busy})}${row('themeDlg','moon','appearance',t(theme))}</div>
+ <div class="grp-lbl">${t('gFw')}</div><div class="card grp"><div class="row"><span class="ri">${ic('download',17)}</span><span class="rt">${t('version')}</span><span class="rv">${esc(s.version)}</span></div>${row('ota','refresh','update',null,{dis:busy})}</div>
+ <div class="card grp">${row('reset','rotate','factoryReset',null,{danger:1,dis:busy})}</div><p class="note" style="margin:-6px 8px 0">${t('resetHelp')}</p>${resetNote?`<p class="note" id="resetStatus" role="status" style="margin:-6px 8px 0;color:var(--warn)">${t(resetNote)}</p>`:''}`);
+ setH($('aboutB'),`<div class="grp-lbl">${t('network')}</div><div class="card grp">${kv('wifiState',on?`<i class="dot${s.wifi?'':' off'}"></i>${t(s.wifi?'online':'disconnected')}`:'—')}${kv('ssid',P(s.ssid))}${kv('ip',P(s.ip))}${kv('wifiSignal',on&&Number.isFinite(s.rssi)?`${bars(s.rssi)}${s.rssi} dBm · ${t(s.rssi>=-60?'strong':s.rssi>=-72?'fair':'weak')}`:'—')}${kv('gateway',P(s.gateway))}${kv('mac',P(s.mac))}${kv('ap',on?t(s.ap_active?'apOn':'apOff'):'—')}</div><p class="note" style="margin:-6px 8px 0">${t('networkHelp')}</p>
+ <div class="grp-lbl">${t('diag')}</div><div class="card grp">${kv('webConn',`<i class="dot${on?'':' off'}"></i>${t(on?'online':'offShort')}`)}${kv('pwm',on?fmt(s.output)+'%':'—')}${kv('uptime',on&&Number.isFinite(s.uptime)?upt(s.uptime):'—')}${kv('heap',on&&Number.isFinite(s.free_heap)?Math.round(s.free_heap/1024)+' KB':'—')}</div>`)}
+/* ---- dialogs ---- */
+let dl=null;
+function dlg(o){if(dl)closeDlg();dl=o;const L2=$('layer');L2.innerHTML=`<div class="scrim" data-a="close"></div><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT" tabindex="-1"><div class="dlg-h"><h3 id="dlgT">${o.title}</h3><button class="x" data-a="close" aria-label="${t('close')}">${ic('x',16,2.4)}</button></div><div class="dlg-b" id="dlgB">${o.body}</div>${o.btns?`<div class="dlg-btns" id="dlgBtns">${o.btns.map((b,i)=>`<button class="${b[1]||''}" data-a="dbtn" data-i="${i}">${b[0]}</button>`).join('')}</div>`:''}</div>`;L2.className='show';o.mount&&o.mount();if(!L2.contains(document.activeElement))L2.querySelector('.dlg').focus()}
+function closeDlg(force){if(dl&&dl.lock&&!force)return;const o=dl;dl=null;$('layer').className='';$('layer').innerHTML='';o&&o.onClose&&o.onClose()}
+const opt=(lbl,on,a,v,sub)=>`<button class="opt" data-a="${a}" data-v="${v}"><span class="rt">${lbl}${sub?`<small>${sub}</small>`:''}</span>${on?`<span class="ck">${ic('check',20,2.6)}</span>`:''}</button>`;
+const ask=(title,msg,ok,cls)=>new Promise(resolve=>{let done=false;const fin=v=>{if(!done){done=true;resolve(v)}};dlg({title,body:`<p>${msg}</p>`,onClose:()=>fin(false),btns:[[t('cancel'),'',()=>closeDlg()],[ok,cls||'primary',()=>{fin(true);closeDlg()}]]})});
+function firstPrompt(autoAfter){let chosen=false;dlg({title:t('calibration'),body:`<p>${t('firstHelp')}</p>`,onClose:()=>{if(!chosen)promptDismissed=true},btns:[[t('cancel'),'',()=>closeDlg()],[t('later'),'',async()=>{if(await send({op:'prompt'})){chosen=true;if(autoAfter)await send({op:'auto',value:true});closeDlg()}}],[t('calibrate'),'primary',async()=>{if(await send({op:'calibrate',auto_after:autoAfter})){chosen=true;closeDlg()}}]]})}
+function beginReboot(done){rebooting={at:Date.now(),sawOffline:false,done};paint()}
+/* ---- theme ---- */
+try{theme=localStorage.fanTheme||'system';}catch(e){}if(theme==='system')theme='sys';const mq=matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(){document.documentElement.dataset.theme=theme==='sys'?(mq.matches?'dark':'light'):theme;try{localStorage.fanTheme=theme==='sys'?'system':theme}catch(e){}paint()}
+mq.addEventListener?.('change',applyTheme);
+/* ---- actions ---- */
+async function requestFactoryReset(){
+ if(!online||!state||state.calibrating||commandsPending||resetRequested)return;
+ if(!await ask(t('resetT'),t('resetConfirm'),t('factoryReset'),'danger'))return;
+ if(!online||!state||state.calibrating||commandsPending||resetRequested)return;
+ resetRequested=true;resetNote='';commandEpoch++;commandsPending++;paint();
+ try {
+  const next=await request({op:'factory_reset',confirm:state.mac});
+  if(!next.reset_pending)throw Error('reset_not_accepted');
+  resetNote='resetAccepted';
+ } catch(e) {
+  resetRequested=false;resetNote='resetUncertain';toast(t('resetUncertain'),true);
+ } finally {commandsPending--;paint();}
+}
+const busyGuard=()=>{if(!live()){toast(t('offline'),true);return true}if(state.calibrating){toast(t('busy'),true);return true}return false};
+const A={
+ go:e=>{ui.tab=e.dataset.v;paint();scrollTo(0,0)},
+ power:()=>{if(live())send({op:'enable',value:!state.config.enabled})},
+ mode:async e=>{if(busyGuard())return;const a=e.dataset.m==='1',c=state.config;if(a===c.automatic)return;if(a&&!valid()&&!c.prompt_seen)return firstPrompt(true);
+  await send({op:'auto',value:a})},
+ preset:e=>{if(busyGuard())return;const v=+e.dataset.v;let unit=state.config.manual_unit&&valid()?1:0,value=unit?Math.round(rpmFor(v)/25)*25:v;if(unit&&value<=0){unit=0;value=v}manualDirty=false;send({op:'manual',unit,value})},
+ custom:()=>{if(customHeld){customHeld=false;return}if(busyGuard())return;const c=state.config;if(!c.custom)return toast(t('customHint'));manualDirty=false;send({op:'manual',value:c.custom,unit:c.custom_unit})},
+ swap:()=>{if(!live()||state.calibrating)return;if(!valid()){if(state.config.enabled)toast(t('needCal'));return}const c=state.config;
+  if(!state.config.enabled){ui.unit=ui.unit?0:1;dkey='';paint();return}
+  if(manualMode()){const u=c.manual_unit?0:1,v=u?clamp(Math.round(rpmFor(c.manual)/25)*25,0,maxR()):Math.max(1,Math.round(pwmFor(c.manual)));manualDirty=false;send({op:'manual',unit:u,value:v})}
+  else ui.unit=ui.unit?0:1;dkey='';paint()},
+ reconnect:()=>{retryBusy=true;paint();clearTimeout(pollTimer);if(!polling)poll()},
+ cu:e=>{ui.cu=+e.dataset.v;paint()},
+ nsel:e=>{ui.node=e.dataset.i!=null?+e.dataset.i:clamp(ui.node+ +e.dataset.v,0,draft.points.length-1);renderCurve()},
+ addPt:()=>{const points=insertPoint(draft.points);if(!points)return toast(t('noRoom'),true);const old=draft.points;draft.points=points;ui.node=Math.max(0,points.findIndex(p=>!old.some(o=>o[0]===p[0])));dirty=true;renderCurve()},
+ del:()=>{if(draft.points.length<=2)return;draft.points.splice(ui.node,1);ui.node=Math.min(ui.node,draft.points.length-1);dirty=true;renderCurve()},
+ undo:()=>{loadDraft();toast('');paint()},
+ saveCurve:async()=>{if(busyGuard())return;const points=draft.points.map(p=>[...p]).sort((a,b)=>a[0]-b[0]);const error=curveError(points,100);if(error)return toast(t(error),true);if(await send({op:'config',config:{curve_unit:0,points}}))loadDraft();paint()},
+ calStart:async()=>{if(busyGuard())return;if(await ask(t('confirmCalT'),t('confirmCal'),t('startCal')))send({op:'calibrate'})},
+ cancelCal:()=>{send({op:'cancel'})},
+ rename:()=>{if(busyGuard())return;dlg({title:t('deviceName'),body:`<div class="field"><input id="nameIn" maxlength="20" autocomplete="off" value="${esc(state.name||'')}"><span class="cnt" id="nameCnt"></span></div><p class="note">${t('nameNote')}</p>`,btns:[[t('cancel'),'',()=>closeDlg()],[t('renameDevice'),'primary',()=>{const v=$('nameIn').value.trim();if(!v||Array.from(v).length>20||new TextEncoder().encode(v).length>63)return toast(t('rejected'),true);closeDlg();send({op:'rename',name:v})}]],mount:()=>{const i=$('nameIn'),f=()=>$('nameCnt').textContent=Array.from(i.value).length+'/20';i.oninput=f;f();i.onkeydown=e=>{if(e.key==='Enter')dl.btns[1][2]()};setTimeout(()=>i.focus(),50)}})},
+ langDlg:()=>{if(busyGuard())return;const c=state.config;dlg({title:t('language'),body:`<div class="opts">${opt('中文',!c.english,'setLang',0)}${opt('English',c.english,'setLang',1)}</div><p class="note">${t('languageHelp')}</p>`})},
+ setLang:async e=>{const en=e.dataset.v==='1';closeDlg();if(en===state.config.english)return;if(await ask(t('langT'),t('languageHelp'),t('restart')))if(await send({op:'config',config:{english:en}}))beginReboot()},
+ powerDlg:()=>{if(busyGuard())return;const p=state.config.power;dlg({title:t('power'),body:`<div class="opts">${[['restore','restoreS'],['off','offS2'],['autoPower','autoPowerS']].map(([k,s],i)=>opt(t(k),p===i,'setPower',i,t(s))).join('')}</div><p class="note">${t('powerNote')}</p>`})},
+ setPower:e=>{closeDlg();const v=+e.dataset.v;if(v!==state.config.power)send({op:'config',config:{power:v}})},
+ themeDlg:()=>dlg({title:t('appearance'),body:`<div class="opts">${['sys','light','dark'].map(k=>opt(t(k),theme===k,'setTheme',k)).join('')}</div><p class="note">${t('appNote')}</p>`}),
+ setTheme:e=>{theme=e.dataset.v;closeDlg();applyTheme()},
+ ota:()=>{if(busyGuard())return;dlg({title:t('update'),body:`<p>${t('updateHelp')}</p><label class="file">${ic('download',20)}<span id="fName">${t('chooseFile')}</span><input type="file" id="fIn" accept=".bin"></label><div id="otaP" hidden style="margin-top:16px"><div class="pbar"><i id="otaBar" style="width:0"></i></div><p class="note" id="otaT"></p></div>`,btns:[[t('cancel'),'',()=>closeDlg()],[t('upload'),'primary',()=>otaGo()]],mount:()=>{const b=$('dlgBtns').lastChild;b.disabled=true;$('fIn').onchange=e=>{const f=e.target.files[0];$('fName').textContent=f?f.name:t('chooseFile');b.disabled=!f}}})},
+ reset:()=>requestFactoryReset(),
+ dbtn:e=>dl.btns[+e.dataset.i][2](),
+ close:()=>closeDlg()};
+function otaGo(){
+ const file=$('fIn').files[0];if(!file||uploading)return;if(busyGuard())return;
+ const form=new FormData(),xhr=new XMLHttpRequest();form.append('update',file,file.name);
+ uploading=true;dl.lock=true;$('dlgBtns').hidden=true;$('otaP').hidden=false;$('otaT').textContent=t('uploading')+' 0%';let sent=false;
+ const finish=(ok,msg)=>{uploading=false;if(dl)dl.lock=false;if(ok){closeDlg(true);beginReboot('updated')}else{closeDlg(true);toast(t(msg),true)}};
+ xhr.upload.onprogress=e=>{if(!e.lengthComputable)return;const p=Math.min(100,Math.round(e.loaded/e.total*100));$('otaBar').style.width=p+'%';$('otaT').textContent=`${t('uploading')} ${p}%`};
+ xhr.upload.onload=()=>{sent=true;$('otaBar').style.width='100%';$('otaT').textContent=t('installing')};
+ xhr.onload=()=>finish(xhr.status===200&&/Successful/.test(xhr.responseText),'updateFailed');
+ xhr.onerror=xhr.ontimeout=()=>sent?(uploading=false,dl&&(dl.lock=false),closeDlg(true),beginReboot('unconfirmed')):finish(false,'uploadFailed');
+ xhr.open('POST','/update');xhr.send(form);
+}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el||el.disabled)return;A[el.dataset.a]?.(el,e)});
+let customTimer=null,customHeld=false;
+document.addEventListener('pointerdown',e=>{if(e.button!==0||!e.target.closest('[data-a=custom]'))return;customHeld=false;customTimer=setTimeout(()=>{customHeld=true;if(busyGuard())return;const save=enabledNow()&&manual.value>0;if(!save&&!state.config.custom)return toast(t('customOff'));send({op:'custom',value:save?manual.value:0,unit:save?effUnit():0}).then(ok=>{if(ok)toast(t(save?'customSaved':'customCleared'))})},600)});
+const stopCustom=()=>{clearTimeout(customTimer);customTimer=null};addEventListener('pointerup',stopCustom);addEventListener('pointercancel',stopCustom);addEventListener('blur',stopCustom);
+document.addEventListener('contextmenu',e=>{if(e.target.closest('[data-a=custom]'))e.preventDefault()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dl)closeDlg();const tb=e.target.closest?.('.tab');if(tb&&(e.key==='ArrowRight'||e.key==='ArrowLeft'||e.key==='Home'||e.key==='End')){const i=TABS.findIndex(x=>x[0]===tb.dataset.v),n=TABS[e.key==='Home'?0:e.key==='End'?3:(i+(e.key==='ArrowRight'?1:3))%4][0];e.preventDefault();ui.tab=n;paint();document.querySelector(`.tab[data-v=${n}]`).focus()}});
+/* hold-to-repeat for -/+ */
+let hT=null,hI=null,hDirty=0;const stopHold=()=>{clearTimeout(hT);clearInterval(hI);hT=hI=null;if(hDirty===1)applyManual();hDirty=0};
+function hold(k,dv){if(k==='d'){if(!live())return false;if(state.calibrating){toast(t('busy'),true);return false}if(!manualMode()){toast(t('autoLocked'));return false}
+  const u=effUnit(),st=u?25:1,mx=u?maxR():100,cur=enabledNow()?manual.value:0,v=clamp(Math.round(cur/st)*st+dv*st,0,mx);if(v===cur)return false;
+  manual.unit=u;manual.value=v;manualDirty=true;manualRevision++;hDirty=1;paint();return true}
+ if(!live()||state.calibrating)return false;const D=draft.points,n=D[ui.node],t0=n[0],o0=n[1];
+ if(k==='t')moveNode(D,ui.node,n[0]+dv,n[1]);else if(cuOn()){const r=displayCalRpm(rpmFor(n[1]))+dv*50;moveNode(D,ui.node,n[0],r<=0?0:clamp(Math.round(pwmFor(r)*10)/10,0,100))}else moveNode(D,ui.node,n[0],Math.round(n[1])+dv);
+ if(n[0]===t0&&n[1]===o0)return false;dirty=true;renderCurve();return true}
+document.addEventListener('pointerdown',e=>{const el=e.target.closest('[data-hold]');if(!el||el.disabled)return;e.preventDefault();stopHold();const [k,dv]=el.dataset.hold.split(':'),f=()=>{if(!hold(k,+dv)){clearInterval(hI);hI=null}};f();hT=setTimeout(()=>{hI=setInterval(f,60)},380)});
+addEventListener('pointerup',stopHold);addEventListener('pointercancel',stopHold);addEventListener('blur',stopHold);
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(paint,80)});
+/* ---- polling ---- */
+async function poll(){const epoch=commandEpoch;polling=true;try{if(!commandsPending&&!uploading){const next=await request();if(epoch===commandEpoch&&!commandsPending)render(next);}retryBusy=false;}catch(e){if(epoch!==commandEpoch||commandsPending)return;online=false;if(rebooting)rebooting.sawOffline=true;retryBusy=false;paint();}finally{polling=false;pollTimer=setTimeout(poll,1500);}}
+buildDial();bindDial();bindGraph();translate();applyTheme();requestAnimationFrame(frame);poll();
+</script></body></html>
