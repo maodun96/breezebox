@@ -6,6 +6,19 @@
 
 这个仓库是控制器的固件源码，对应手机 App「微风盒」内置的固件，当前版本 **1.3.1**。
 
+## 配套 App
+
+微风盒 iPhone App（iOS 17 及以上）是使用这台控制器的主要方式，目前准备上架 App Store。App 不在这个仓库里。
+
+- **蓝牙配网**：自动发现待配网的控制器，把 Wi-Fi 信息发给它。
+- **局域网控制**：自动发现同一网络里的控制器，开关、手动和自动、调速、温度曲线、风扇校准都能在 App 里做。
+- **多台设备**：每台按硬件 MAC 识别，改名、移除互不影响。
+- **固件升级**：App 内置本仓库对应版本的固件，选择升级后通过局域网上传。
+- **快捷指令**：可在 iOS 快捷指令里开关风扇、切换模式、设定风速。
+- 不需要账号，不使用云服务，控制只在局域网内进行。
+
+不装 App 也能用：设备自带网页，也能接入 Home Assistant。
+
 ## 功能
 
 - **手动和自动**：手动设置风速，或按温度曲线自动调速。关闭风扇时，温控不会把它打开。
@@ -37,10 +50,18 @@
 
 ## 首次使用
 
+通电后有两种方式把控制器接入 Wi-Fi。
+
+**用 App（推荐）**
+
 1. 给控制器通电。
-2. 用 App「微风盒」添加风扇，按提示选择 Wi-Fi 并输入密码。
-3. 没有 App 时：手机连接设备热点 `breezebox-` 加 MAC 后六位，打开 `192.168.4.1`，选择 Wi-Fi 配网。热点没有密码。
-4. 联网后，设备在局域网内以 `breezebox-xxxxxx.local` 访问。
+2. 打开 App，点“添加风扇”，选择待配网的设备，选择 Wi-Fi 并输入密码。
+3. 配网完成后，App 会自动发现并添加这台风扇。
+
+**不用 App**
+
+1. 给控制器通电，手机连接设备热点 `breezebox-` 加 MAC 后六位，打开 `192.168.4.1`，选择 Wi-Fi 配网。热点没有密码。
+2. 联网后，在局域网内用浏览器打开 `breezebox-xxxxxx.local`，或在 Home Assistant 里添加。
 
 OLED 上左右键翻页：主页、控制模式、网络信息、恢复出厂。恢复出厂需要在恢复页长按中键，松开后再短按一次确认。
 
@@ -90,6 +111,19 @@ BreezeBox is a small controller for 4-pin PWM PC case fans, built on an ESP32 an
 
 This repository is the controller's firmware source. It matches the firmware bundled in the BreezeBox iPhone app. Current version: **1.3.1**.
 
+### Companion app
+
+The BreezeBox iPhone app (iOS 17 or later) is the main way to use this controller. It is being prepared for the App Store and is not in this repository.
+
+- **Bluetooth setup.** Finds a controller that needs Wi-Fi and sends the network details to it.
+- **Local control.** Finds controllers on the same network. Power, manual and automatic mode, speed, temperature curve and calibration are all in the app.
+- **Several devices.** Each one is identified by its hardware MAC, so renaming or removing one does not affect another.
+- **Firmware update.** The app bundles the firmware that matches this repository and uploads it over the local network.
+- **Shortcuts.** Turn the fan on or off, change mode or set speed from iOS Shortcuts.
+- No account and no cloud service. Control stays on your local network.
+
+You can also use the controller without the app, through its built-in web page or Home Assistant.
+
 ### Features
 
 - **Manual and automatic modes.** Automatic mode follows a temperature curve and never turns on a fan that you switched off.
@@ -108,10 +142,11 @@ ESP32 (`esp32dev`, 4 MB flash). See the pin table above or `config.yaml`.
 
 ### First use
 
-1. Power the controller.
-2. Add the fan in the BreezeBox app and follow the Wi-Fi steps.
-3. Without the app: join the hotspot `breezebox-` plus the last six digits of the MAC, open `192.168.4.1` and pick a network. The hotspot has no password.
-4. After it joins Wi-Fi, open `breezebox-xxxxxx.local` on your network.
+There are two ways to put the controller on Wi-Fi after you power it.
+
+**With the app (recommended):** open the app, tap Add Fan, pick the controller, choose your Wi-Fi and enter the password. The app then finds and adds the fan.
+
+**Without the app:** join the hotspot `breezebox-` plus the last six digits of the MAC, open `192.168.4.1` and pick a network. The hotspot has no password. After it joins Wi-Fi, open `breezebox-xxxxxx.local` in a browser or add it in Home Assistant.
 
 ### Build
 
