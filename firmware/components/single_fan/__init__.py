@@ -15,6 +15,7 @@ from esphome.components import (
     ssd1306_base,
     binary_sensor,
     improv_ble,
+    ble_client,
 )
 from esphome.helpers import fnv1_hash_object_id
 from esphome.const import CONF_ID
@@ -73,6 +74,7 @@ schema = {
         cv.Required(name + "_button"): cv.use_id(binary_sensor.BinarySensor)
         for name in ("center", "up", "down", "left", "right")
     },
+    cv.Required("sensor_client"): cv.use_id(ble_client.BLEClient),
     cv.Required("provisioning"): cv.use_id(improv_ble.ImprovBLEComponent),
     cv.Required("font"): cv.use_id(font.Font),
     cv.Required("web_server_base_id"): cv.use_id(web_server_base.WebServerBase),
@@ -130,6 +132,7 @@ async def to_code(config):
         "left_button",
         "right_button",
         "provisioning",
+        "sensor_client",
     ]:
         cg.add(getattr(var, "set_" + name)(await cg.get_variable(config[name])))
     # Keep action IDs stable when entities are added or removed.

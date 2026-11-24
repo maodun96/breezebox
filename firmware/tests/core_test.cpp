@@ -239,4 +239,43 @@ static void ui_integration(){
   ui.poll(host,33000,false,false,false,false,false);assert(ui.hold_ticks==0);
   ui.poll(host,63000,false,false,false,false,false);assert(!host.screen);
 }
-int main(){ui_integration();scale_runtime();stall();rpm_open_loop();consecutive_calibrations();settling_calibration();dense_grid();calibration();custom_preset();std::cout<<"core tests passed\n";}
+static void external_sensor() {
+  ControllerCore c;
+  assert(valid_settings(c.settings) && !c.external() && !c.settings.ext_sensor.bound);
+  c.settings.sensor_source = SensorSource::EXTERNAL;
+  assert(!valid_settings(c.settings));
+  auto &cfg = c.settings.ext_sensor;
+  cfg.bound = true;
+  std::copy_n("A4:C1:38:46:6B:6F",18,cfg.mac.begin());
+  std::copy_n("lywsd03mmc",11,cfg.driver.begin());
+  assert(valid_settings(c.settings));
+  cfg.mac[0]='a'; assert(!valid_settings(c.settings)); cfg.mac[0]='A';
+  cfg.driver[0]='x'; assert(!valid_settings(c.settings)); cfg.driver[0]='l';
+  auto *driver = driver_for(cfg.driver.data());
+  uint8_t advert[]={0,0,0x5b,0x05};
+  assert(driver->match_adv("",0xfe95,advert,4));
+  advert[2]=0; assert(!driver->match_adv("",0xfe95,advert,4));
+  assert(driver->match_adv("LYWSD03MMC",0,nullptr,0));
+  uint8_t data[]={0x18,0xfc,68,0xe9,0x0b}; BleSample reading{};
+  assert(driver->parse_payload(data,5,reading) && reading.temperature==-10 && reading.mv==3049);
+  assert(!driver->parse_payload(data,4,reading));
+  data[2]=101; assert(!driver->parse_payload(data,5,reading));
+  c.settings.enabled=c.settings.automatic=true;
+  c.boot(0);c.sample_temperature(35,120000);c.sample_humidity(91);c.tick(180000);
+  assert(!c.temp_fault && std::isnan(c.temperature) && std::isnan(c.humidity) && c.output==0);
+  c.tick(180001);assert(c.temp_fault && c.output==100);
+  c.enable(false);c.tick(180002);assert(c.temp_fault && c.output==0);
+  // Power-off stays off even when temp_fault triggers in automatic mode from off state.
+  ControllerCore off_auto;off_auto.settings.ext_sensor=cfg;off_auto.settings.sensor_source=SensorSource::EXTERNAL;
+  off_auto.settings.enabled=false;off_auto.settings.automatic=true;off_auto.boot(0);
+  off_auto.tick(180001);assert(off_auto.temp_fault && off_auto.output==0);
+  // Manual mode keeps manual speed during external temp_fault.
+  off_auto.manual(40,Unit::PWM);off_auto.tick(181001);off_auto.tick(182001);
+  assert(off_auto.temp_fault && near(off_auto.output,scale_to_output(off_auto.settings.cal.minimum,40)));
+  c.sample_external({25,67,3049},180003); assert(!c.temp_fault && c.humidity==67 && c.temperature==25);
+  c.settings.sensor_source=SensorSource::INTERNAL;c.reset_temperature(190000);
+  c.sample_external({14,11,3100},190001);assert(std::isnan(c.temperature));
+  c.tick(200000);assert(c.temp_fault);c.sample_temperature(30,200001);assert(c.temp_fault);
+  c.sample_temperature(31,200002);assert(!c.temp_fault);
+}
+int main(){external_sensor();ui_integration();scale_runtime();stall();rpm_open_loop();consecutive_calibrations();settling_calibration();dense_grid();calibration();custom_preset();std::cout<<"core tests passed\n";}

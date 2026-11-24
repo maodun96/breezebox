@@ -1,170 +1,120 @@
-# 微风盒 BreezeBox 固件
+# 微风盒（BreezeBox）12V PWM 风扇控制器
 
 [English](#english) · 中文
 
-微风盒是一款给 4 针 PWM 机箱风扇用的小型控制器，基于 ESP32 和 ESPHome。它用温度自动调速，也能手动调速，可以在手机、网页和 Home Assistant 里控制。
+基于 `ESP32-WROOM-32E-N4` 的本地 12V PWM 风扇控制器，支持多点自动温控曲线、自动风扇校准、外置蓝牙温湿度传感器直连、机身 0.91 寸 OLED + 五向摇杆、内置离线网页、Home Assistant 原生接入以及 iOS / Android 配套 App。无需云端，无需账号，DIY 复刻成本约 **30 元**。
 
-这个仓库是控制器的固件源码，对应手机 App「微风盒」内置的固件，当前版本 **1.3.1**。
+当前发布固件版本：**`v1.4.0`**
 
-## 配套 App
+---
 
-微风盒 iPhone App（iOS 17 及以上）是使用这台控制器的主要方式，目前准备上架 App Store。App 不在这个仓库里。
+## 快捷入口
 
-- **蓝牙配网**：自动发现待配网的控制器，把 Wi-Fi 信息发给它。
-- **局域网控制**：自动发现同一网络里的控制器，开关、手动和自动、调速、温度曲线、风扇校准都能在 App 里做。
-- **多台设备**：每台按硬件 MAC 识别，改名、移除互不影响。
-- **固件升级**：App 内置本仓库对应版本的固件，选择升级后通过局域网上传。
-- **快捷指令**：可在 iOS 快捷指令里开关风扇、切换模式、设定风速。
-- 不需要账号，不使用云服务，控制只在局域网内进行。
-
-不装 App 也能用：设备自带网页，也能接入 Home Assistant。
-
-## 功能
-
-- **手动和自动**：手动设置风速，或按温度曲线自动调速。关闭风扇时，温控不会把它打开。
-- **温度曲线**：2 到 10 个点，温度 0 到 50 ℃，风速随温度只升不降。
-- **风扇校准**：自动测出风扇的最低稳转点、启动点和转速表，之后可以按转速（RPM）设定。
-- **网页控制**：设备自带网页，无需联网，适配手机和电脑，有深色模式。
-- **OLED 和按键**：128×32 小屏显示状态，五个按键可开关、调速、切换模式和恢复出厂。
-- **Home Assistant**：通过 ESPHome 原生接口接入，提供风扇、控制模式、温湿度、转速和校准等实体。
-- **蓝牙配网**：用 App 通过蓝牙（Improv 协议）把设备接入 Wi-Fi；没有 App 时，设备也会开热点，用网页配网。
-- **保护**：温湿度传感器失联时，自动模式下风扇满速并报警；断网不影响本地控制。
-- **升级**：支持网页和 App 上传固件，升级失败会自动回滚。
-
-## 硬件
-
-主控 ESP32（`esp32dev`，4 MB Flash）。引脚如下，以 `config.yaml` 为准。
-
-| 用途 | 引脚 | 说明 |
+| 资源 | 说明 | 地址 |
 | --- | --- | --- |
-| 风扇 PWM | GPIO16 | 25 kHz |
-| 风扇供电开关 | GPIO21 | |
-| 风扇测速 | GPIO32 | 每转 2 个脉冲 |
-| 温湿度传感器 SHT3x | GPIO13 (SDA)、GPIO14 (SCL) | I²C 地址 0x44 |
-| OLED SSD1306 128×32 | GPIO13 (SDA)、GPIO14 (SCL)、GPIO17 (RST) | I²C 地址 0x3C |
-| 中键 | GPIO0 | 低电平触发 |
-| 上键 | GPIO22 | 低电平触发 |
-| 下键 | GPIO25 | 低电平触发 |
-| 左键 | GPIO26 | 低电平触发 |
-| 右键 | GPIO27 | 低电平触发 |
+| **固件与安卓 App 下载** | `factory.bin` / `ota.bin` / Android APK | [GitHub Releases](https://github.com/maodun96/breezebox/releases) |
+| **iOS App** | 免费提供，iOS 17.0 及以上 | [App Store · 微风盒](https://apps.apple.com/cn/app/id6834356846) |
+| **PCB 硬件开源** | 嘉立创 EDA 专业版原理图、PCB、BOM | [嘉立创开源硬件 · 微风盒 BreezeBox](https://oshwhub.com/maodun96/project_mkhircso) |
+| **3D 打印外壳模型** | PLA 免支撑 3MF，CC BY-NC 4.0 | [拓竹 MakerWorld](https://makerworld.com.cn/zh/models/3330566-wei-feng-he-breezebox-12v-si-zhen-pwm-feng-shan-ko#profileId-3938861) ｜ [创想云](https://www.crealitycloud.cn/model-detail/6b05be3bb2a2575a3c5e61fc?profileId=6b05be3bb2a2575a3c5e6202) |
+| **在线使用说明书** | 图文接线、配网、温控曲线与 FAQ | [飞书在线说明书](https://my.feishu.cn/docx/ZOi6dRNPao81GGx7LmCcXoj1nYg) |
+| **成品购买（免焊接）** | 已焊好并装好外壳，到手插电即用 | [拼多多 · 微风盒成品](https://mobile.yangkeduo.com/goods.html?goods_id=1032587630292) |
 
-## 首次使用
+---
 
-通电后有两种方式把控制器接入 Wi-Fi。
+## 仓库目录与许可
 
-**用 App（推荐）**
+| 目录 | 内容 | 许可证 |
+| --- | --- | --- |
+| [`firmware/`](firmware/) | ESPHome / ESP-IDF 控制器固件源码、内置离线网页与构建测试脚本 | [GPLv3](LICENSE) |
+| [`enclosure/`](enclosure/) | 3D 打印外壳 3MF 模型（通用版 & Bambu A1 PLA 切片配置） | CC BY-NC 4.0 |
+| [`hardware/`](hardware/) | 硬件参数、GPIO 定义、BOM 外采购件与串口烧录说明 | 开源硬件（详见 [OSHWHub](https://oshwhub.com/maodun96/project_mkhircso)） |
 
-1. 给控制器通电。
-2. 打开 App，点“添加风扇”，选择待配网的设备，选择 Wi-Fi 并输入密码。
-3. 配网完成后，App 会自动发现并添加这台风扇。
+- 配套 iOS / Android App 为免费闭源分发，不在此仓库内。
+- 字体 `Noto Sans SC` 遵循 SIL OFL 1.1，详见 [`firmware/fonts/OFL.txt`](firmware/fonts/OFL.txt)。
+- `firmware/components/` 中源自 ESPHome 的组件遵循其原许可，详见 [`firmware/components/ESPHOME-LICENSE`](firmware/components/ESPHOME-LICENSE)。
 
-**不用 App**
+---
 
-1. 给控制器通电，手机连接设备热点 `breezebox-` 加 MAC 后六位，打开 `192.168.4.1`，选择 Wi-Fi 配网。热点没有密码。
-2. 联网后，在局域网内用浏览器打开 `breezebox-xxxxxx.local`，或在 Home Assistant 里添加。
+## 核心特性
 
-OLED 上左右键翻页：主页、控制模式、网络信息、恢复出厂。恢复出厂需要在恢复页长按中键，松开后再短按一次确认。
+- **12V 断电真停转 + 25 kHz PWM 调速**：高边负载开关 `TPS22810DRVR` 彻底切断风扇 12V 供电实现 0% 零待机停转，额定输出 2A。
+- **自动风扇校准**：自动测量最低稳转点、起转点与转速对照表，校准后支持 1%～100% 稳定低速运行及按 RPM 精确调速。
+- **2～10 点温控曲线**：0～50℃ 整数温度节点，曲线存于主板 NVS，断网脱机照常运行。
+- **外置蓝牙温湿度传感器直连**：支持直接通过 BLE 轮询**某米的温湿度传感器 2**，无需第三方传感器固件或网关；3 分钟无有效读数时自动模式触发 100% 满速保护。
+- **四端本地控制**：iOS / Android App、内置离线 Web UI、Home Assistant 原生 ESPHome API（6053 端口，免密钥自动发现）、机身 0.91 寸 OLED 与五向摇杆。
+- **双配网方式**：Improv BLE 蓝牙配网 + 机身无密码 Wi-Fi 热点配网（`192.168.4.1`）。
 
-## 构建
+---
 
-需要 Python 3.11 以上、`clang++`（支持 C++17）和 Node.js。固定使用 ESPHome 2026.10.1 和 ESP-IDF。下载依赖需要联网。
+## 硬件与首次烧录
 
-```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python build.py check    # 运行本地检查
-.venv/bin/python build.py build    # 编译并打包
-```
+- **主控**：`ESP32-WROOM-32E-N4`（4 MB Flash）
+- **供电**：12V 直流，DC5521 母座（兼容 DC5525 插头），严禁接入超过 12V 的电源
+- **风扇接口**：标准 12V PWM 风扇接口（KF2510-3+1P），最大负载电流 2A
+- **首次串口烧录**：
+  1. 从 [Releases](https://github.com/maodun96/breezebox/releases) 下载对应版本的 `single-fan-x.y.z.factory.bin`（不要用 `.ota.bin` 做首次串口烧录）。
+  2. 使用 3.3V USB-TTL 下载器连接板边烧录焊盘 `R / T / G / 3V3`（分别对应 `RXD / TXD / GND / 3.3V`，注意 `TX/RX` 交叉连接）。
+  3. **按住五向摇杆中键（`GPIO0`）不松手，再给板子上电**，进入下载模式后松开按键。
+  4. 使用 `esptool` 或乐鑫烧录工具将 `factory.bin` 烧录至地址 **`0x0`**，断电重启即可。
 
-产物在 `dist/`：
+完整硬件参数、GPIO 映射与 BOM 外物料见 [`hardware/README.md`](hardware/README.md)；固件编译与 OTA 说明见 [`firmware/README.md`](firmware/README.md)。
 
-| 文件 | 用途 |
-| --- | --- |
-| `single-fan-1.3.1.ota.bin` | 升级用，网页或 App 上传 |
-| `single-fan-1.3.1.factory.bin` | 首次通过串口刷写的完整镜像，不用于网页升级 |
-| `single-fan-1.3.1-source.tar.gz` | 对应源码 |
-| `manifest.json` | 文件大小、SHA-256、ESPHome 版本 |
-
-构建时间会写进二进制，同一份源码在不同时间编出的文件，校验值可能不同。
-
-目录说明：`components/` 是本项目的 ESPHome 组件，`web/` 是设备网页，`tests/` 是本地检查，`fonts/` 是 OLED 字体。
+---
 
 ## 安全说明
 
-这是有意的设计：设备面向家庭局域网，网页、固件升级和 Home Assistant 接口不设密码，也不加密，这样 App 配对不需要输入密码。请只在可信的网络里使用，并只给自己的设备配网。
-
-## 许可
-
-本项目以 GPLv3 发布，全文见 [LICENSE](LICENSE)。
-
-- `components/` 里的 `wifi`、`esp32_ble_server`、`improv_ble`、`captive_portal` 源自 ESPHome，改动说明见 [components/IMPROV-PATCHES.md](components/IMPROV-PATCHES.md)，ESPHome 的许可见 [components/ESPHOME-LICENSE](components/ESPHOME-LICENSE)。
-- 字体 Noto Sans SC 使用 SIL OFL 1.1，见 [fonts/OFL.txt](fonts/OFL.txt)。
-- 配套的 iPhone App 不在这个仓库里。
-
-[TEST_REPORT.md](TEST_REPORT.md) 是开发期间的测试记录，保留作参考，其中的早期版本号不代表当前版本。
+设备面向家庭可信局域网，内置网页、OTA 接口与 Home Assistant API 均不设密码且不启用加密，以便局域网免密直连。请仅在可信的家庭局域网中使用。
 
 ---
 
 ## English
 
-BreezeBox is a small controller for 4-pin PWM PC case fans, built on an ESP32 and ESPHome. It sets fan speed from temperature or by hand, and you can control it from a phone, a web page or Home Assistant.
+**BreezeBox** is a local 12V PWM fan controller built around `ESP32-WROOM-32E-N4` and ESPHome. It supports multi-point automatic temperature curves, automatic fan calibration, target RPM control, direct BLE polling for external `LYWSD03MMC` temperature/humidity sensors, an onboard 0.91" OLED with a 5-way joystick, a built-in offline web UI, native Home Assistant integration, and companion iOS / Android apps. No cloud or account required.
 
-This repository is the controller's firmware source. It matches the firmware bundled in the BreezeBox iPhone app. Current version: **1.3.1**.
+Latest firmware release: **`v1.4.0`**
 
-### Companion app
+### Quick Links
 
-The BreezeBox iPhone app (iOS 17 or later) is the main way to use this controller. It is being prepared for the App Store and is not in this repository.
+| Resource | Description | Link |
+| --- | --- | --- |
+| **Firmware & Android APK** | Prebuilt `factory.bin`, `ota.bin`, and Android APK | [GitHub Releases](https://github.com/maodun96/breezebox/releases) |
+| **iOS App** | Free companion app (iOS 17.0+) | [App Store](https://apps.apple.com/cn/app/id6834356846) |
+| **PCB & Schematics** | EasyEDA Pro schematics, PCB layout, and BOM | [OSHWHub](https://oshwhub.com/maodun96/project_mkhircso) |
+| **3D Printable Enclosure** | Support-free PLA `.3mf` models (CC BY-NC 4.0) | [MakerWorld](https://makerworld.com.cn/zh/models/3330566-wei-feng-he-breezebox-12v-si-zhen-pwm-feng-shan-ko#profileId-3938861) \| [Creality Cloud](https://www.crealitycloud.cn/model-detail/6b05be3bb2a2575a3c5e61fc?profileId=6b05be3bb2a2575a3c5e6202) |
+| **User Manual (CN)** | Wiring, Wi-Fi setup, curves, and FAQ | [Feishu Doc](https://my.feishu.cn/docx/ZOi6dRNPao81GGx7LmCcXoj1nYg) |
 
-- **Bluetooth setup.** Finds a controller that needs Wi-Fi and sends the network details to it.
-- **Local control.** Finds controllers on the same network. Power, manual and automatic mode, speed, temperature curve and calibration are all in the app.
-- **Several devices.** Each one is identified by its hardware MAC, so renaming or removing one does not affect another.
-- **Firmware update.** The app bundles the firmware that matches this repository and uploads it over the local network.
-- **Shortcuts.** Turn the fan on or off, change mode or set speed from iOS Shortcuts.
-- No account and no cloud service. Control stays on your local network.
+### Repository Layout & Licenses
 
-You can also use the controller without the app, through its built-in web page or Home Assistant.
+| Directory | Contents | License |
+| --- | --- | --- |
+| [`firmware/`](firmware/) | ESPHome / ESP-IDF firmware source, built-in offline web UI, tests, and build script | [GPLv3](LICENSE) |
+| [`enclosure/`](enclosure/) | Support-free PLA `.3mf` enclosure files | CC BY-NC 4.0 |
+| [`hardware/`](hardware/) | Hardware specifications, GPIO pinout, BOM-external parts, and flashing guide | Open Hardware ([OSHWHub](https://oshwhub.com/maodun96/project_mkhircso)) |
 
-### Features
+- The companion iOS / Android apps are distributed free of charge (closed source) and are not part of this repository.
+- `Noto Sans SC` font is licensed under SIL OFL 1.1 ([`firmware/fonts/OFL.txt`](firmware/fonts/OFL.txt)).
+- ESPHome-derived components under `firmware/components/` retain their upstream license ([`firmware/components/ESPHOME-LICENSE`](firmware/components/ESPHOME-LICENSE)).
 
-- **Manual and automatic modes.** Automatic mode follows a temperature curve and never turns on a fan that you switched off.
-- **Temperature curve.** 2 to 10 points, 0 to 50 °C. Speed can only stay the same or rise as temperature rises.
-- **Fan calibration.** Measures the lowest stable speed, the start point and an RPM table, so you can also set speed in RPM.
-- **Built-in web page.** Works without internet, on phone and desktop, with dark mode.
-- **OLED and buttons.** A 128×32 display and five buttons for power, speed, mode and factory reset.
-- **Home Assistant.** Native ESPHome API with fan, mode, temperature, humidity, RPM and calibration entities.
-- **Bluetooth setup.** The app sends Wi-Fi details over Bluetooth (Improv). Without the app, the device opens a hotspot and a web setup page.
-- **Protection.** If the temperature sensor stops reporting, an automatic-mode fan runs at full speed and raises an alert. Losing the network does not stop local control.
-- **Updates.** Upload firmware from the web page or the app. A failed update rolls back.
+### Key Features
 
-### Hardware
+- **True 12V Power Cutoff + 25 kHz PWM**: High-side load switch (`TPS22810DRVR`) cuts 12V power completely at 0% speed; rated up to 2A.
+- **Automatic Fan Calibration**: Measures minimum stable duty cycle, startup kick, and RPM lookup table for reliable 1%–100% control and target RPM mode.
+- **2–10 Point Temperature Curve**: Integer 0–50 °C points stored in NVS; continues operating offline without Wi-Fi.
+- **Direct External BLE Sensor Support**: Polls `LYWSD03MMC` Bluetooth temperature/humidity sensors directly over BLE (no custom sensor firmware or gateway required); falls back to 100% fail-safe speed in Auto mode if no reading arrives for 3 minutes.
+- **Local Multi-Client Control**: iOS / Android apps, built-in offline Web UI, native Home Assistant ESPHome API (port 6053, auto-discovered without an encryption key), and onboard 0.91" OLED + 5-way joystick.
+- **Dual Wi-Fi Provisioning**: Improv BLE via app, or open fallback AP (`192.168.4.1`).
 
-ESP32 (`esp32dev`, 4 MB flash). See the pin table above or `config.yaml`.
+### Hardware & First-Time Flashing
 
-### First use
+- **MCU**: `ESP32-WROOM-32E-N4` (4 MB Flash)
+- **Power Input**: 12V DC via DC5521 barrel jack (compatible with DC5525 plugs); do not exceed 12V
+- **Fan Header**: Standard 12V PWM fan header (`KF2510-3+1P`), max 2A total load
+- **Initial Serial Flash**:
+  1. Download `single-fan-x.y.z.factory.bin` from [Releases](https://github.com/maodun96/breezebox/releases) (do not use `.ota.bin` for initial serial flashing).
+  2. Connect a 3.3V USB-TTL adapter to the board-edge pads `R / T / G / 3V3` (`RXD / TXD / GND / 3.3V`, cross-connecting TX/RX).
+  3. **Hold the 5-way joystick center button (`GPIO0`) while applying power** to enter bootloader download mode, then release.
+  4. Flash `factory.bin` to address **`0x0`** with `esptool`, then power-cycle.
 
-There are two ways to put the controller on Wi-Fi after you power it.
+### Security Note
 
-**With the app (recommended):** open the app, tap Add Fan, pick the controller, choose your Wi-Fi and enter the password. The app then finds and adds the fan.
-
-**Without the app:** join the hotspot `breezebox-` plus the last six digits of the MAC, open `192.168.4.1` and pick a network. The hotspot has no password. After it joins Wi-Fi, open `breezebox-xxxxxx.local` in a browser or add it in Home Assistant.
-
-### Build
-
-Needs Python 3.11 or newer, `clang++` with C++17 and Node.js. ESPHome 2026.10.1 with ESP-IDF is pinned. Network access is needed to download dependencies.
-
-```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python build.py check
-.venv/bin/python build.py build
-```
-
-Outputs are in `dist/`: the OTA image, the factory image for the first serial flash, the source archive and a manifest with SHA-256 values. The build time is embedded in the binary, so two builds of the same source can differ.
-
-### Security
-
-By design, the web page, firmware update and Home Assistant API have no password and no encryption, so the app can pair without one. Use it only on a network you trust.
-
-### License
-
-GPLv3, see [LICENSE](LICENSE). Parts of `components/` come from ESPHome (see `components/ESPHOME-LICENSE`). The font is Noto Sans SC under SIL OFL 1.1. The iPhone app is not in this repository.
+By design, the built-in web UI, OTA endpoint, and Home Assistant API have no authentication or encryption so local discovery and control work without passwords. Use only on a trusted local network.

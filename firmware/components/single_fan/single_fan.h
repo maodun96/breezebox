@@ -1,5 +1,6 @@
 #pragma once
 #include "core.h"
+#include "ble_sensor_hub.h"
 #include "ui.h"
 #include "esphome/components/ssd1306_base/ssd1306_base.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
@@ -55,6 +56,11 @@ class ControlSelect : public Named<select::Select> {
 class Controller : public Component, public AsyncWebHandler {
  public:
   ControllerCore core;
+  BleSensorHub hub{this};
+  void set_sensor_client(ble_client::BLEClient *client) { client->register_ble_node(&hub); }
+  void ota_active(bool active) { hub.ota = active; if (active) hub.pause("connect_failed"); }
+  bool provisioning_busy() const;
+  friend class BleSensorHub;
   void setup() override;
   void loop() override;
   void on_shutdown() override;
@@ -101,7 +107,7 @@ class Controller : public Component, public AsyncWebHandler {
     auto call = fan_->turn_off();
     call.perform();
   }
-  void authorize() { provisioning_->authorize(); }
+  void authorize() { hub.pause("ble_busy"); provisioning_->authorize(); }
   void request_reset() { core.factory_requested = true; }
 #define FC_SET(name, type) \
   void set_##name(type *p) { name##_ = p; } \

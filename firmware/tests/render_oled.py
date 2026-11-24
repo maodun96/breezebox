@@ -23,7 +23,7 @@ namespace improv_ble {struct Component {improv::State get_improv_state(){return 
 Component instance;Component *global_improv_component=&instance;}
 namespace network {constexpr int IP_ADDRESS_BUFFER_SIZE=64;}
 namespace wifi {
-struct IP {const char* str_to(char *b){std::strcpy(b,"192.168.1.50");return b;}};
+struct IP {const char* str_to(char *b){std::strcpy(b,"192.168.10.193");return b;}};
 struct WiFi {bool connected=true,ap=false;bool is_connected(){return connected;}bool is_ap_active(){return ap;}std::array<IP,1> get_ip_addresses(){return {};} IP wifi_soft_ap_ip(){return {};}};
 WiFi instance;WiFi* global_wifi_component=&instance;
 }

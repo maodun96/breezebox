@@ -1,4 +1,5 @@
 #pragma once
+#include "ble_sensor_driver.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -61,6 +62,9 @@ inline bool valid_device_name(std::string_view s) {
   return true;
 }
 struct Settings {
+  SensorSource sensor_source{SensorSource::INTERNAL};
+  ExtSensorConfig ext_sensor{};
+  uint16_t ext_handle{};
   std::array<char, 64> device_name{
       {'P', 'W', 'M', ' ', char(0xE9), char(0xA3), char(0x8E), char(0xE6), char(0x89), char(0x87), 0}};
   bool enabled{}, automatic{}, english{}, prompt_seen{}, resume_once{};
@@ -86,6 +90,8 @@ inline float output_to_scale(float minimum, float output) {
   return 1 + (output - minimum) * 99 / (100 - minimum);
 }
 inline bool valid_settings(const Settings &s) {
+  if (!valid_ext(s.ext_sensor) || unsigned(s.sensor_source) > 1 ||
+      (s.sensor_source == SensorSource::EXTERNAL && !s.ext_sensor.bound)) return false;
   const auto end = std::find(s.device_name.begin(), s.device_name.end(), '\0');
   if (end == s.device_name.end() ||
       !valid_device_name(std::string_view(s.device_name.data(), end - s.device_name.begin())))
@@ -219,7 +225,23 @@ class ControllerCore {
       settings.automatic = true;
     }
   }
+  bool external() const { return settings.sensor_source == SensorSource::EXTERNAL; }
+  void reset_temperature(uint32_t now) {
+    last_temp_ = now;
+    temperature = humidity = NAN;
+    temp_fault = false;
+    good_temp_ = 0;
+  }
+  void sample_external(const BleSample &s, uint32_t now) {
+    if (!external() || !finite_range(s.temperature,-40,85) || !finite_range(s.humidity,0,100)) return;
+    temperature = s.temperature;
+    humidity = s.humidity;
+    last_temp_ = now;
+    temp_fault = false;
+  }
+  void sample_humidity(float h) { if (!external()) humidity = h; }
   void sample_temperature(float t, uint32_t now) {
+    if (external()) return;
     if (std::isfinite(t)) {
       temperature = t;
       last_temp_ = now;
@@ -323,7 +345,7 @@ class ControllerCore {
       calibration_pending_save = false;
   }
   void tick(uint32_t now) {
-    if (uint32_t(now - last_temp_) >= 10000) {
+    if (external() ? uint32_t(now - last_temp_) > 180000 : uint32_t(now - last_temp_) >= 10000) {
       temp_fault = true;
       good_temp_ = 0;
       temperature = humidity = NAN;

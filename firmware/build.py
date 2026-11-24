@@ -80,6 +80,7 @@ def check():
         run(['node', '--check', script])
         run([sys.executable, ROOT/'tests/web_curve_test.py'])
         run([sys.executable, ROOT/'tests/web_control_test.py'])
+        run([sys.executable, ROOT/"tests/external_sensor_test.py"])
         run([sys.executable, ROOT/'tests/ha_entities_test.py'])
         run([sys.executable, ROOT/'tests/device_identity_test.py'])
         run([sys.executable, ROOT/'tests/entity_identity_test.py'])

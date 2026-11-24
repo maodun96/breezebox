@@ -83,6 +83,16 @@ button:disabled{cursor:default;opacity:.4}
 .locked .step{opacity:0;pointer-events:none}
 .env{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:999px;background:var(--surface);font-size:13.5px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
 .env .ic.t{color:var(--warm)}.env .ic.h{color:#4FA8FF}.env i{width:1px;height:12px;background:var(--line2);margin:0 7px}.env .warn{color:var(--warn)}
+.ext-tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700;line-height:1.3;color:var(--accent);background:var(--accent-soft);margin-left:5px;vertical-align:middle}
+.ext-h{font-size:12px;font-weight:600;color:var(--muted);margin:14px 4px 8px;letter-spacing:.04em}
+.ext-card{border-radius:18px;background:var(--surface);overflow:hidden}
+.ext-card .row{min-height:48px;padding:8px 14px}
+.ext-card .row+.row::before{left:14px}
+.ext-pair{padding:7px 14px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:600;flex:none;white-space:nowrap}
+.ext-pair:disabled{background:var(--surface2);color:var(--muted);opacity:1}
+.ext-err{margin-top:12px;padding:10px 14px;border-radius:14px;background:var(--danger-soft);color:var(--danger);font-size:13px;line-height:1.5}
+.dlg-b .banner{margin-bottom:12px}
+.dlg-b .btn{margin-top:10px}
 .dim .dial-wrap,.dim .ctl{opacity:.4;pointer-events:none}
 .seg{position:relative;display:grid;grid-template-columns:1fr 1fr;height:56px;border-radius:28px;background:var(--surface2);padding:5px}
 .seg .ind{position:absolute;top:5px;bottom:5px;left:5px;width:calc(50% - 5px);border-radius:23px;background:var(--seg-ind);transition:transform .38s cubic-bezier(.3,.75,.2,1)}
@@ -147,9 +157,6 @@ button.row:not(:disabled):hover{background:color-mix(in srgb,var(--surface2) 50%
 .pt.act{background:var(--accent-soft)}.pt.act i{color:var(--accent)}
 .pt.head{height:30px;font-size:12px;color:var(--muted);cursor:default}
 .add-node{width:100%;height:46px;margin-top:6px;border-radius:14px;border:1.5px dashed var(--faint);color:var(--muted);font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px}
-.savebar{display:flex;align-items:center;gap:10px;padding:12px 12px 12px 18px}
-.savebar p{flex:1;font-size:13px;color:var(--muted)}.savebar p.warn{color:var(--warn);font-weight:600}
-.savebar .btn{width:auto;height:42px;margin:0;padding:0 18px;font-size:14px;border-radius:14px}
 /* cal */
 .cal-ring{position:relative;width:170px;height:170px;margin:4px auto 14px}
 .cal-ring .cn{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;font-weight:300;font-variant-numeric:tabular-nums}
@@ -219,7 +226,6 @@ details[open].card summary::after{content:"−"}
 .ctl{margin-top:-4px}.node-head em{display:none}.pre b{font-size:14.5px}
 #p-curve .card-h{flex-wrap:wrap}#p-curve .h-act{width:100%;justify-content:space-between}.seg{background:var(--surface)}.pre,.auto-card{background:var(--surface)}.spark{background:var(--surface2)}
 .card{border-radius:22px;padding:16px}
-.savebar.dirty{position:sticky;bottom:calc(90px + env(safe-area-inset-bottom));box-shadow:0 10px 30px -12px rgba(0,0,0,.35)}
 #toast{bottom:calc(92px + env(safe-area-inset-bottom))}
 .dlg{position:absolute;bottom:0;width:100%;border-radius:28px 28px 0 0;padding-bottom:calc(24px + env(safe-area-inset-bottom));animation:up .28s cubic-bezier(.3,.8,.2,1)}
 .tile b{font-size:20px}
@@ -249,7 +255,7 @@ details[open].card summary::after{content:"−"}
 </section>
 <section class="panel curve" id="p-curve" role="tabpanel" aria-labelledby="tab-curve" hidden>
 <div class="card"><div class="card-h"><div><b data-t="curve"></b><span id="curveSub"></span></div><div class="h-act" id="curveAct"></div></div><svg id="graph" class="graph"></svg><p class="note" id="curveNote"></p></div>
-<div class="col"><div class="card" id="nodeCard"></div><div class="card pts" id="ptList"></div><div class="card savebar" id="saveBar"></div></div>
+<div class="col"><div class="card" id="nodeCard"></div><div class="card pts" id="ptList"></div><div class="banner err" id="curveErr" hidden></div></div>
 </section>
 <section class="panel" id="p-cal" role="tabpanel" aria-labelledby="tab-cal" hidden>
 <div class="card" id="calMain"></div>
@@ -277,25 +283,62 @@ auto:'<path d="M12 3v3M18.36 5.64l-2.12 2.12M21 12h-3M18.36 18.36l-2.12-2.12M12 
 rotate:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',pulse:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'};
 const ic=(n,s=20,w=2,c='ic')=>`<svg class="${c}" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
 let resetRequested=false,resetNote='';
-let state,lang='zh',draft=null,dirty=false,online=null,manualDirty=false,promptDismissed=false,commandEpoch=0,commandsPending=0,commandQueue=Promise.resolve(),manualRevision=0;
-let rebooting=null,uploading=false,polling=false,pollTimer=0,retryBusy=false,graphDrag=false,dragging=false,dkey='',theme='sys';
+let state,lang='zh',draft=null,dirty=false,curveRev=0,curveSaving=false,curveQueued=false,curveFail='',curveTimer=null,online=null,manualDirty=false,promptDismissed=false,commandEpoch=0,commandsPending=0,commandQueue=Promise.resolve(),manualRevision=0;
+let rebooting=null,uploading=false,polling=false,pollTimer=0,retryBusy=false,graphDrag=false,graphMoved=false,dragging=false,dkey='',theme='sys';
 const manual={unit:0,value:0},ui={tab:'run',node:0,cu:0,unit:0};
 const t=k=>words[lang][k]||k;
 const colon=()=>lang==='en'?': ':'：';
 let toastTimer;
-function toast(message,error=false){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').className=message?'show'+(error?' err':''):'';if(message)toastTimer=setTimeout(()=>{$('toast').className='';},error?6000:2400);}
+function toast(message,error=false,duration){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').className=message?'show'+(error?' err':''):'';if(message)toastTimer=setTimeout(()=>{$('toast').className='';},duration||(error?6000:2400));}
 async function request(payload){
  const response=await fetch('/control',{method:payload?'POST':'GET',body:payload?new URLSearchParams({data:JSON.stringify(payload)}):undefined,cache:'no-store',headers:payload?{'X-Fan-Request':'1'}:{},signal:AbortSignal.timeout(6000)});
- if(!response.ok)throw Error(t('rejected'));return await response.json();
+ if(!response.ok){
+   if(payload?.op?.startsWith('ext_')){
+     const text=await response.text().catch(()=>'');
+     let body={};
+     if(response.status===400&&text.length<=65536){try{const parsed=JSON.parse(text);if(parsed&&typeof parsed==='object')body=parsed;}catch{}}
+     throw Object.assign(Error(),{extError:extError(body,response.status)});
+   }
+   throw Error(t('rejected'));
+ }return await response.json();
 }
 function send(payload,onSuccess){
  if(resetRequested)return Promise.resolve(false);
- const epoch=++commandEpoch;commandsPending++;paint();
- const operation=commandQueue.then(async()=>{try{const next=await request(payload);if(onSuccess)onSuccess();if(epoch===commandEpoch){render(next);toast(t('saved'));}return true;}catch(e){if(epoch===commandEpoch){if(state)render(state);toast(e.message,true);}return false;}finally{commandsPending--;paint();}});
+ const epoch=++commandEpoch,isCurve=payload.op==='config'&&!!payload.config?.points;commandsPending++;paint();
+ const operation=commandQueue.then(async()=>{try{const next=await request(payload);const ok=onSuccess?onSuccess(next)!==false:true;if(epoch===commandEpoch){render(next);if(ok&&!payload.op?.startsWith('ext_'))toast(t('saved'));}return ok;}catch(e){if(epoch===commandEpoch){if(state)render(state);if(payload.op?.startsWith('ext_')){extUI.error=e.extError||'network';paint()}else if(!isCurve)toast(e.message,true);}return false;}finally{commandsPending--;paint();}});
  commandQueue=operation;return operation;
 }
 function syncManual(s){if(manualDirty)return;manual.unit=s.config.manual_unit;manual.value=s.config.manual;}
-function loadDraft(){draft={points:state.config.points.map(p=>[...p])};dirty=false;}
+function loadDraft(){draft={points:state.config.points.map(p=>[...p])};dirty=false;curveFail='';}
+function pointsEqual(a,b){return Array.isArray(a)&&Array.isArray(b)&&a.length===b.length&&a.every((p,i)=>Array.isArray(p)&&Array.isArray(b[i])&&p[0]===b[i][0]&&Math.abs(p[1]-b[i][1])<.05);}
+function markCurveEdit(){dirty=true;curveRev++;curveFail='';clearTimeout(curveTimer);curveTimer=null;}
+function scheduleCurveSave(delay=250){clearTimeout(curveTimer);curveTimer=setTimeout(()=>{curveTimer=null;saveCurve();},delay);}
+function saveCurve(){
+ clearTimeout(curveTimer);curveTimer=null;
+ if(!draft||!dirty)return Promise.resolve(true);
+ if(curveSaving){curveQueued=true;return Promise.resolve(false);}
+ if(!live()||state.calibrating){curveFail='curveSaveFail';paint();return Promise.resolve(false);}
+ const points=draft.points.map(p=>[...p]).sort((a,b)=>a[0]-b[0]);
+ const error=curveError(points,100);
+ if(error){curveFail=error;paint();return Promise.resolve(false);}
+ const rev=curveRev;
+ curveSaving=true;curveQueued=false;curveFail='';paint();
+ let matched=false;
+ return send({op:'config',config:{curve_unit:0,points}},next=>{
+  matched=pointsEqual(next?.config?.points,points);
+  if(matched&&rev===curveRev){dirty=false;curveFail='';}
+  return matched;
+ }).then(ok=>{
+  curveSaving=false;
+  const done=ok&&matched;
+  if(!done&&rev===curveRev){curveFail='curveSaveFail';if(ui.tab!=='curve')toast(t('curveSaveFail'),true);}
+  const again=curveQueued||(!curveTimer&&rev!==curveRev);
+  curveQueued=false;
+  paint();
+  if(again&&dirty&&!graphDrag&&hDirty!==2)return saveCurve();
+  return done;
+ });
+}
 function curveOrdered(points){const sorted=[...points].sort((a,b)=>a[0]-b[0]);return sorted.every((p,i)=>!i||p[1]>=sorted[i-1][1]);}
 function curveError(points,max){
  if(points.length<2||points.length>10||points.some(p=>!Number.isInteger(p[0])||p[0]<0||p[0]>50||!Number.isFinite(p[1])||p[1]<0||p[1]>max)||new Set(points.map(p=>p[0])).size!==points.length)return 'invalid';
@@ -349,7 +392,7 @@ actual:'实测|Actual',needCal:'按转速调节需先校准|Calibrate to use RPM
 quiet:'静音|Quiet',std:'标准|Standard',full:'全速|Full',custom:'自定义|Custom',customUnset:'未设置|Not set',customHint:'先调好转速，再长按这里保存|Set a speed first, then press and hold here to save',customOff:'先开启风扇并调好转速|Turn the fan on and set a speed first',customSaved:'已存为自定义|Saved as custom',customCleared:'已清除自定义|Custom cleared',autoRun:'按温控曲线运行|Following the curve',tempNow:'室温|Temp',speedNow:'风速|speed',
 curve:'温控曲线|Temperature curve',edit:'编辑|Edit',switchAuto:'切换到自动|Switch to auto',autoOn:'自动运行中|Auto running',autoOff:'风扇已关闭|Fan off',
 node:'节点|Point',nodes:'个节点|points',temp:'温度|Temperature',speed:'风速|Speed',dragHint:'拖动圆点，或用 −/+ 微调|Drag a point or fine-tune with −/+',add:'添加节点|Add point',remove:'删除|Remove',
-draft:'有未保存修改|Unsaved edits',draftNone:'修改后需保存才会生效|Edits apply after saving',undo:'撤销|Discard',save:'保存并应用|Save & apply',saved:'已保存|Saved',
+curveSaveFail:'曲线未保存，修改已保留|Curve not saved. Changes retained.',saved:'已保存|Saved',
 noRoom:'两个节点之间需留出至少 1℃ 的空位（最多 10 个节点）|Leave a free whole degree between two points (max 10 points)',
 curveHelp:'温度越高，风速不能越低；百分比与转速依照校准表近似换算。|Higher temperatures never use lower speeds. % and RPM are converted approximately from calibration.',
 calAdvice:'校准建议|Calibration guidance',minimum:'最低转速|Minimum speed',max:'最高转速|Maximum speed',
@@ -405,7 +448,7 @@ function render(s){
  if(previousLang!==lang)translate();
  if(rebooting&&(rebooting.sawOffline||Date.now()-rebooting.at>45000)){const done=rebooting.done;rebooting=null;if(done)toast(t(done)+(done==='unconfirmed'&&state.version?' '+t('version')+': '+state.version:''),done==='unconfirmed');}
  syncManual(s);
- if(!draft||(!dirty&&JSON.stringify(draft.points)!==JSON.stringify(s.config.points)))loadDraft();
+ if(!draft||(!dirty&&!graphDrag&&!curveSaving&&!curveFail&&!curveTimer&&JSON.stringify(draft.points)!==JSON.stringify(s.config.points)))loadDraft();
  ui.node=clamp(ui.node,0,draft.points.length-1);
  if(previousCal&&previousCal!==JSON.stringify(s.config.cal)&&!valid())ui.cu=0,ui.unit=0;
  paint();
@@ -422,6 +465,7 @@ function paint(){
  $('p-run').classList.toggle('dim',!on);
  if(!state)return;
  if(ui.tab==='run')renderRun();else if(ui.tab==='curve')renderCurve();else if(ui.tab==='cal')renderCal();else renderAbout();
+ if(dl?.external){if(state.ext_status?.supported!==true)closeDlg(true);else renderExt();}
  if(c.automatic&&!c.cal.valid&&!c.prompt_seen&&!state.calibrating&&!promptDismissed&&!dl&&online)firstPrompt(false);
 }
 function bn(k,i,b,s,btn){return `<div class="banner ${k}">${ic(i,22)}<div class="bn-main"><b>${b}</b>${s?`<span>${s}</span>`:''}</div>${btn||''}</div>`}
@@ -431,8 +475,9 @@ function banners(){let h='';
  else if(state){
   if(state.calibrating&&ui.tab!=='cal')h+=bn('info','target',`<span id="bnCT"></span>`,`<span id="bnCS"></span><div class="pbar"><i id="bnCB"></i></div>`,`<button class="bn-btn" data-a="go" data-v="cal">${t('view')}</button>`);
   else if(state.cal_error&&ui.tab!=='cal')h+=bn('err','alert',`${t('calFailed')} · ${t(state.cal_error)}`,t('keptOld'),`<button class="bn-btn" data-a="go" data-v="cal">${t('view')}</button>`);
-  else if(!valid()&&!state.calibrating&&(ui.tab==='run'||ui.tab==='curve'||ui.tab==='cal'))h+=bn('info','target',t('calSuggest'),t('calSuggestS'),`<button class="bn-btn" data-a="go" data-v="cal">${t('goCal')}</button>`);
-  const F=[['temp_fault','tempFault'],['rpm_fault','rpmFault'],['save_fault','saveFault'],['config_fault','configFault']].filter(([f])=>state[f]).map(x=>x[1]);
+  if(state.temp_fault)h+=bn('err','alert',t('tempFault'),t('tempFaultS'));
+  if(!valid()&&!state.calibrating&&!state.cal_error&&(ui.tab==='run'||ui.tab==='curve'||ui.tab==='cal'))h+=bn('info','target',t('calSuggest'),t('calSuggestS'),`<button class="bn-btn" data-a="go" data-v="cal">${t('goCal')}</button>`);
+  const F=[['rpm_fault','rpmFault'],['save_fault','saveFault'],['config_fault','configFault']].filter(([f])=>state[f]).map(x=>x[1]);
   if(F.length)h+=bn('','alert',F.map(t).join(' · '),F.length>1?F.map(k=>t(k+'S')).join('；'):t(F[0]+'S'));}
  setH($('banners'),h);
  if($('bnCT')){const p=Math.max(0,Math.min(100,Math.round(state.progress)));$('bnCT').textContent=`${t('calibrating')} · ${p}%`;$('bnCS').textContent=`${t(state.cal_stage||'calibrating')} · ${t('output')} ${Math.round(state.output)}%`;$('bnCB').style.width=p+'%'}}
@@ -488,15 +533,15 @@ function renderRun(){const c=state.config,on=live();
  $('dialWrap').classList.toggle('locked',!canDrag());
  $('seg').dataset.v=+c.automatic;$('mManual').className=c.automatic?'':'act';$('mAuto').className=c.automatic?'act':'';
  const tv=tempOk()?Math.round(state.temperature):null;
- setH($('env'),`${ic('thermo',15,2,'ic t')}<span class="${tempOk()||!on?'':'warn'}">${tv==null?'—':tv+'°C'}</span><i></i>${ic('drop',15,2,'ic h')}<span>${on&&Number.isFinite(state.humidity)?Math.round(state.humidity)+'%':'—'}</span>`);
+ setH($('env'),`${ic('thermo',15,2,'ic t')}<span class="${tempOk()||!on?'':'warn'}">${tv==null?'—':tv+'°C'}</span><i></i>${ic('drop',15,2,'ic h')}<span>${on&&Number.isFinite(state.humidity)?Math.floor(state.humidity+0.5)+'%':'—'}</span>${extTag()?`<span class="ext-tag">${extTag()}</span>`:''}`);
  const cur=manualMode()?(manual.unit&&valid()?pwmFor(manual.value):manual.value):-1,en=enabledNow();
  const cv=c.custom,cu=c.custom_unit,cr=valid()?cu?cv:rpmFor(cv):0;
  setH($('modeBox'),manualMode()?`<div class="presets">${[['quiet',25],['std',50],['full',100]].map(([k,v])=>{const rp=valid()?rpmFor(v):0;return `<button class="pre${en&&Math.abs(cur-v)<.6?' act':''}" data-a="preset" data-v="${v}"><b>${t(k)}</b><span>${v}%${rp>0?`<em> · </em><span class="r">${fmt(displayCalRpm(rp,v===100))} RPM</span>`:''}</span></button>`}).join('')}<button class="pre${en&&cv>0&&manual.unit===cu&&Math.abs(manual.value-cv)<.6?' act':''}" data-a="custom"><b>${t('custom')}</b><span>${cv?cu?`${fmt(cv)} RPM`:`${cv}%`:t('customUnset')}${cr>0?`<em> · </em><span class="r">${fmt(displayCalRpm(cr))} RPM</span>`:''}</span></button></div>`
   :`<button class="auto-card" data-a="go" data-v="curve">${spark(76,44)}<div class="ac-t"><b>${t('autoRun')}</b><span>${autoLine()}</span></div>${ic('chevR',18)}</button>`);
  {const q=c.points;$('peekSub').textContent=`${q.length} ${t('nodes')} · ${q[0][0]}–${q.at(-1)[0]}°C → ${Math.round(q[0][1])}–${Math.round(q.at(-1)[1])}%`}if(!graphDrag)drawCurve($('peek'),c.points,0);
  const r=(i,k,v,a,x)=>`<button class="row" data-a="${a}" ${x||''}><span class="ri">${ic(i,17)}</span><span class="rt">${t(k)}</span><span class="rv">${v}</span><span class="chev">${ic('chevR',16)}</span></button>`;
- setH($('sumRows'),r('target','tCal',state.calibrating?`${t('calibrating')} ${Math.round(state.progress)}%`:valid()?`${t('calibrated')} · ${t('max')} ${fmt(displayCalRpm(cal().rpm[10],true))} RPM`:`<span style="color:var(--warn)">${t('notCal')}</span>`,'go','data-v="cal"')+r('wifi','network',on&&state.ssid?`${esc(state.ssid)}${Number.isFinite(state.rssi)?' · '+bars(state.rssi):''}`:'—','go','data-v="about"')+r('zap','power',t(['restore','off','autoPower'][c.power]||'restore'),'powerDlg'))}
-function autoLine(){if(!tempOk())return t('tempFault');const c=state.config,tp=Math.round(state.temperature),p=curveAt(c.points,state.temperature);return `${t('tempNow')} ${tp}°C → ${t('speedNow')} ${Math.round(p)}%`+(valid()&&p>0?` · ${fmt(displayCalRpm(rpmFor(p)))} RPM`:'')}
+ setH($('sumRows'),r('target','tCal',state.calibrating?`${t('calibrating')} ${Math.round(state.progress)}%`:valid()?`${t('calibrated')} · ${t('max')} ${fmt(displayCalRpm(cal().rpm[10],true))} RPM`:`<span style="color:var(--warn)">${t('notCal')}</span>`,'go','data-v="cal"')+extRow()+r('wifi','network',on&&state.ssid?`${esc(state.ssid)}${Number.isFinite(state.rssi)?' · '+bars(state.rssi):''}`:'—','go','data-v="about"')+r('zap','power',t(['restore','off','autoPower'][c.power]||'restore'),'powerDlg'))}
+function autoLine(){if(!tempOk())return state.temp_fault?t('tempFault'):`${t('tempNow')} —`;const c=state.config,tp=Math.round(state.temperature),p=curveAt(c.points,state.temperature);return `${t('tempNow')} ${tp}°C → ${t('speedNow')} ${Math.round(p)}%`+(valid()&&p>0?` · ${fmt(displayCalRpm(rpmFor(p)))} RPM`:'')}
 function spark(w,h){const c=state.config.points,X=x=>4+x/50*(w-8),Y=o=>4+(1-o/100)*(h-8),pts=[[X(0),Y(c[0][1])],...c.map(p=>[X(p[0]),Y(p[1])]),[X(50),Y(c.at(-1)[1])]],tv=tempOk()?state.temperature:null;
  return `<svg class="spark mb" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="M${pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' L')}" fill="none" style="stroke:var(--accent)" stroke-width="2" stroke-linejoin="round"/>${tv!=null?`<circle cx="${X(clamp(tv,0,50))}" cy="${Y(curveAt(c,tv))}" r="3.5" style="fill:var(--warm)"/>`:''}</svg>`}
 function bars(r){const n=r>=-55?4:r>=-65?3:r>=-75?2:1;return `<span class="bars">${[4,7,10,13].map((h,i)=>`<i class="${i<n?'on':''}" style="height:${h}px"></i>`).join('')}</span>`}
@@ -519,11 +564,11 @@ function drawCurve(svg,c,edit){const w=Math.round(svg.getBoundingClientRect().wi
 const spd=(p,plain)=>cuOn()?(p<=0?(plain?'0 RPM':`0<u>RPM</u>`):(plain?fmt(rpmFor(p))+' RPM':`${fmt(rpmFor(p))}<u>RPM</u>`)):(plain?Math.round(p)+'%':`${Math.round(p)}<u>%</u>`);
 function bindGraph(){const g=$('graph');
  g.addEventListener('pointerdown',e=>{if(!live()||state.calibrating)return toast(t(live()?'busy':'offline'),true);const r=g.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;let bi=-1,bd=1e9;
-  draft.points.forEach((p,i)=>{const d=Math.hypot(G.L+p[0]/50*(G.R-G.L)-px,G.T+(1-p[1]/100)*(G.B-G.T)-py);if(d<bd){bd=d;bi=i}});if(bd>30)return;ui.node=bi;graphDrag=true;g.setPointerCapture(e.pointerId);renderCurve()});
- g.addEventListener('pointermove',e=>{if(!graphDrag)return;const r=g.getBoundingClientRect();moveNode(draft.points,ui.node,Math.round((e.clientX-r.left-G.L)/(G.R-G.L)*50),Math.round((1-(e.clientY-r.top-G.T)/(G.B-G.T))*100));dirty=true;renderCurve()});
- const end=()=>{if(graphDrag){graphDrag=false;renderCurve()}};g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end)}
+  draft.points.forEach((p,i)=>{const d=Math.hypot(G.L+p[0]/50*(G.R-G.L)-px,G.T+(1-p[1]/100)*(G.B-G.T)-py);if(d<bd){bd=d;bi=i}});if(bd>30)return;ui.node=bi;graphDrag=true;graphMoved=false;g.setPointerCapture(e.pointerId);renderCurve()});
+ g.addEventListener('pointermove',e=>{if(!graphDrag)return;const r=g.getBoundingClientRect(),p=draft.points[ui.node],t0=p[0],o0=p[1];moveNode(draft.points,ui.node,Math.round((e.clientX-r.left-G.L)/(G.R-G.L)*50),Math.round((1-(e.clientY-r.top-G.T)/(G.B-G.T))*100));if(p[0]!==t0||p[1]!==o0){graphMoved=true;markCurveEdit();}renderCurve()});
+ const end=()=>{if(!graphDrag)return;graphDrag=false;const moved=graphMoved;graphMoved=false;renderCurve();if(moved)saveCurve()};g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end)}
 function renderCurve(){const c=state.config,ed=live()&&!state.calibrating,dis=ed?'':'disabled',D=draft.points;
- $('curveSub').textContent=autoLine();
+ setH($('curveSub'),esc(autoLine())+(extTag()?`<span class="ext-tag">${extTag()}</span>`:''));
  setH($('curveAct'),(valid()?`<div class="chips"><button class="chip${cuOn()?'':' act'}" data-a="cu" data-v="0">%</button><button class="chip${cuOn()?' act':''}" data-a="cu" data-v="1">RPM</button></div>`:'')+(!live()?`<span class="pill mute">${t('offShort')}</span>`:c.automatic&&c.enabled?`<span class="pill">${t('autoOn')}</span>`:c.automatic?`<span class="pill mute">${t('autoOff')}</span>`:`<button class="pill-btn" data-a="mode" data-m="1">${t('switchAuto')}</button>`));
  drawCurve($('graph'),D,1);
  setH($('curveNote'),valid()?`<span class="adv">${ic('target',15)}${t('calAdvice')}${colon()}${t('minimum')} ≈ ${fmt(displayCalRpm(rpmFor(1)))} RPM · ${t('max')} ≈ ${fmt(displayCalRpm(cal().rpm[10],true))} RPM</span>`:t('curveHelp'));
@@ -533,7 +578,7 @@ function renderCurve(){const c=state.config,ed=live()&&!state.calibrating,dis=ed
  <div class="node-row"><span>${t('speed')}<small id="ndS"></small></span><div class="stepper"><button data-hold="o:-1" ${dis} aria-label="-">${ic('minus',16,2.4)}</button><b id="ndO"></b><button data-hold="o:1" ${dis} aria-label="+">${ic('plus',16,2.4)}</button></div></div>`);
  $('ndT').innerHTML=n[0]+'<u>°C</u>';$('ndO').innerHTML=spd(n[1]);const ns=$('ndS');ns.className='';ns.textContent=cuOn()?Math.round(n[1])+'%':valid()&&n[1]>0?'≈ '+fmt(rpmFor(n[1]))+' RPM':'0–100%';
  setH($('ptList'),`<div class="pt head"><i>#</i><span>${t('temp')}</span><span>${t('speed')}</span><em>${valid()?'≈ RPM':''}</em></div>`+D.map((p,i)=>`<button class="pt${i===ui.node?' act':''}" data-a="nsel" data-i="${i}"><i>${i+1}</i><span>${p[0]}°C</span><span>${Math.round(p[1])}%</span><em>${valid()?(p[1]>0?fmt(rpmFor(p[1])):'0'):''}</em></button>`).join('')+`<button class="add-node" data-a="addPt" ${D.length>=10||!ed?'disabled':''}>${ic('plus',18)}${t('add')}</button>`);
- $('saveBar').classList.toggle('dirty',dirty);setH($('saveBar'),`<p class="${dirty?'warn':''}">${t(dirty?'draft':'draftNone')}</p><button class="btn ghost" data-a="undo" ${dirty?'':'disabled'}>${t('undo')}</button><button class="btn" data-a="saveCurve" ${dirty&&ed?'':'disabled'}>${t('save')}</button>`)}
+ const ce=$('curveErr');ce.hidden=!curveFail;if(curveFail)setH(ce,`${ic('alert',20)}<div class="bn-main"><b>${esc(t(curveFail))}</b></div><button class="bn-btn" data-a="retryCurve" ${ed&&!curveSaving?'':'disabled'}>${t('retry')}</button>`);}
 /* ---- calibration panel ---- */
 const STAGES=['signal','rpm_table','verify','saving'];
 function renderCal(){const c=cal(),on=live(),s=state;let h=`<div class="card-h"><div><b>${t('calibration')}</b><span>${t('calSub')}</span></div>${calPill()}</div>`;
@@ -563,7 +608,7 @@ function drawCal(){const svg=$('calChart');if(!svg)return;const w=Math.round(svg
 function renderAbout(){const c=state.config,on=live(),busy=!on||state.calibrating,s=state;
  const row=(a,i,k,v,o={})=>`<button class="row${o.danger?' danger':''}" data-a="${a}" ${o.dis?'disabled':''}><span class="ri">${ic(i,17)}</span><span class="rt">${t(k)}</span>${v!=null?`<span class="rv">${v}</span>`:''}${o.danger?'':`<span class="chev">${ic('chevR',16)}</span>`}</button>`;
  const kv=(k,v)=>`<div class="row kv"><span class="rt">${t(k)}</span><span class="rv">${v}</span></div>`,P=v=>on?(v?esc(v):t('pending')):'—';
- setH($('aboutA'),`<div class="grp-lbl">${t('gDevice')}</div><div class="card grp">${row('rename','pencil','deviceName',esc(s.name||'PWM 风扇'),{dis:busy})}${row('langDlg','globe','language',c.english?'English':'中文',{dis:busy})}${row('powerDlg','zap','power',t(['restore','off','autoPower'][c.power]||'restore'),{dis:busy})}${row('themeDlg','moon','appearance',t(theme))}</div>
+ setH($('aboutA'),`<div class="grp-lbl">${t('gDevice')}</div><div class="card grp">${row('rename','pencil','deviceName',esc(s.name||'PWM 风扇'),{dis:busy})}${row('langDlg','globe','language',c.english?'English':'中文',{dis:busy})}${row('powerDlg','zap','power',t(['restore','off','autoPower'][c.power]||'restore'),{dis:busy})}${row('themeDlg','moon','appearance',t(theme))}${extRow()}</div>
  <div class="grp-lbl">${t('gFw')}</div><div class="card grp"><div class="row"><span class="ri">${ic('download',17)}</span><span class="rt">${t('version')}</span><span class="rv">${esc(s.version)}</span></div>${row('ota','refresh','update',null,{dis:busy})}</div>
  <div class="card grp">${row('reset','rotate','factoryReset',null,{danger:1,dis:busy})}</div><p class="note" style="margin:-6px 8px 0">${t('resetHelp')}</p>${resetNote?`<p class="note" id="resetStatus" role="status" style="margin:-6px 8px 0;color:var(--warn)">${t(resetNote)}</p>`:''}`);
  setH($('aboutB'),`<div class="grp-lbl">${t('network')}</div><div class="card grp">${kv('wifiState',on?`<i class="dot${s.wifi?'':' off'}"></i>${t(s.wifi?'online':'disconnected')}`:'—')}${kv('ssid',P(s.ssid))}${kv('ip',P(s.ip))}${kv('wifiSignal',on&&Number.isFinite(s.rssi)?`${bars(s.rssi)}${s.rssi} dBm · ${t(s.rssi>=-60?'strong':s.rssi>=-72?'fair':'weak')}`:'—')}${kv('gateway',P(s.gateway))}${kv('mac',P(s.mac))}${kv('ap',on?t(s.ap_active?'apOn':'apOff'):'—')}</div><p class="note" style="margin:-6px 8px 0">${t('networkHelp')}</p>
@@ -595,8 +640,122 @@ async function requestFactoryReset(){
  } finally {commandsPending--;paint();}
 }
 const busyGuard=()=>{if(!live()){toast(t('offline'),true);return true}if(state.calibrating){toast(t('busy'),true);return true}return false};
+const X=(zh,en)=>lang==='en'?en:zh;
+const normMac=s=>typeof s==='string'?s.trim().toUpperCase():'';
+const nonBlank=s=>typeof s==='string'&&s.trim()?s.trim():'';
+const extBindCodes=new Set(['timeout','connect_failed','unsupported','ble_busy','save_failed']);
+const extErrors={
+ timeout:['连接超时，请将传感器靠近控制器后重试','Connection timed out. Move the sensor closer and try again.'],
+ connect_failed:['蓝牙连接失败，请确认手机米家 App 未停留在温湿度计页面','Connection failed. Close the sensor page in Mi Home and try again.'],
+ unsupported:['无法读取温湿度数据，该设备型号或固件暂不支持','Could not read data. This sensor model or firmware is not supported.'],
+ ble_busy:['控制器正在蓝牙配网，请稍后再试','Bluetooth provisioning is active. Try again later.'],
+ save_failed:['设备保存配置失败，请重试','Failed to save settings on the controller. Try again.'],
+ busy:['设备忙或当前无法操作，请稍后再试','The controller is busy or unavailable right now. Try again later.'],
+ network:['请检查设备连接','Check the device connection.']
+};
+function extError(body,status){
+ if(status!==400)return 'network';
+ const code=body?.ext_status?.bind_error;
+ return extBindCodes.has(code)?code:body?.error==='ble_busy'?'ble_busy':'busy';
+}
+const extUI={expand:false,empty:false,target:'',error:'',participated:false,observedScan:false,stoppedByThisClient:false,prevScanning:false,prevBinding:false,bindPending:false,scanId:0};
+function extSend(op,fields={},onSuccess){
+ extUI.error='';
+ return send({op,...fields},onSuccess);
+}
+const extModel=r=>esc(nonBlank(r?.[lang==='en'?'model_en':'model_zh'])||(r?.driver==='lywsd03mmc'?X('米家温湿度计 2','Mi Sensor 2'):nonBlank(r?.name))||'--');
+const extTitle=()=>X('温度来源','Temperature source');
+const extTag=()=>state?.ext_status?.supported===true&&state.config.sensor_source===1&&state.ext_status.state!=='lost'?X('外置','Ext'):'';
+const signal=r=>r>=-65?X('强','Strong'):r>=-80?X('中','Fair'):X('弱','Weak');
+const warnExt=s=>'<span style="color:var(--warn)">'+s+'</span>';
+function extRow(){
+ const x=state.ext_status,c=state.config;
+ if(x?.supported!==true)return '';
+ const value=!live()?'':!c.sensor_source?X('内置传感器','Built-in'):x.state==='lost'?warnExt(X('外置已失联','Sensor lost')):x.battery_pct!=null&&x.battery_pct<=20?warnExt(X('电量低','Low battery')):extModel(c.ext_sensor);
+ return `<button class="row" data-a="extDlg" ${live()?'':'disabled'}><span class="ri">${ic('thermo',17)}</span><span class="rt">${extTitle()}</span><span class="rv">${value}</span><span class="chev">${ic('chevR',16)}</span></button>`;
+}
+function openExt(){
+ if(!live()||state.ext_status?.supported!==true)return;
+ const x=state.ext_status||{};
+ Object.assign(extUI,{error:'',target:'',expand:false,empty:false,participated:false,observedScan:x.scanning===true,stoppedByThisClient:false,prevScanning:x.scanning===true,prevBinding:x.binding===true,bindPending:false,scanId:Number(x.scan_id)||0});
+ dlg({external:true,title:extTitle(),body:''});renderExt();
+}
+function renderExt(){
+ const x=state?.ext_status,c=state?.config;
+ if(x?.supported!==true){if(dl?.external)closeDlg(true);return;}
+ const r=c.ext_sensor&&typeof c.ext_sensor==='object'?c.ext_sensor:null,external=c.sensor_source===1;
+ const rMac=normMac(r?.mac),tail=esc(rMac?rMac.slice(-5):'--'),macDisplay=esc(rMac||'--');
+ const results=Array.isArray(x.scan_results)?x.scan_results.filter(it=>it&&typeof it==='object'&&normMac(it.mac)).map(it=>({...it,mac:normMac(it.mac)})):[];
+ const scanning=x.scanning===true,binding=x.binding===true,curScanId=Number(x.scan_id)||0;
+ if(scanning){
+  if(curScanId&&curScanId!==extUI.scanId){extUI.stoppedByThisClient=false;extUI.scanId=curScanId;}
+  extUI.observedScan=true;extUI.empty=false;
+ }else if(!binding&&results.length===0&&!extUI.stoppedByThisClient){
+  const reason=typeof x.scan_end_reason==='string'?x.scan_end_reason:'';
+  if((reason==='completed'&&(extUI.participated||extUI.observedScan))||(!reason&&extUI.prevScanning))extUI.empty=true;
+ }else if(results.length>0||binding){
+  extUI.empty=false;
+ }
+ extUI.prevScanning=scanning;
+ if(!extUI.bindPending&&!binding&&(extUI.target||extUI.prevBinding)){
+  const bErr=typeof x.bind_error==='string'?x.bind_error:'';
+  if(bErr){extUI.error=extBindCodes.has(bErr)?bErr:'busy';extUI.target='';}
+  else if(extUI.target&&rMac===extUI.target){extUI.expand=false;extUI.target='';toast(X('已绑定并切换为外置传感器','Paired and switched to external sensor'),false,2500);}
+ }
+ extUI.prevBinding=binding;
+ const btn=(action,label,attrs='',cls='btn ghost')=>`<button class="${cls}" data-a="${action}" ${attrs}>${label}</button>`;
+ const group=s=>'<h4 class="ext-h">'+s+'</h4>', note=s=>'<p class="note">'+s+'</p>';
+ const lock=!live()||state.calibrating||commandsPending||binding;
+ const age=x.age_s??'--',low=x.battery_pct!=null&&x.battery_pct<=20;
+ const tempStr=Number.isFinite(state.temperature)?state.temperature.toFixed(1):'--';
+ const humStr=Number.isFinite(state.humidity)?String(Math.floor(state.humidity+0.5)):'--';
+ const batStr=x.battery_pct==null?'--':x.battery_pct+'%';
+ const weak=X('信号较弱，已 '+age+' 秒未更新','Weak signal, updated '+age+'s ago');
+ const connecting=X('正在连接读取…','Connecting…'), lost=X('已失联超过 3 分钟','Disconnected for over 3 min');
+ const model=r?extModel(r):X('外置蓝牙传感器','External BLE sensor');
+ const sub=!r?X('未绑定，请先在下方搜索添加','Not paired. Scan below to add one'):!external?X('已绑定 · 尾号 ','Paired · ends in ')+tail:x.state==='lost'?warnExt(lost):x.state==='connecting'?connecting:x.state==='stale'?warnExt(weak):`${tempStr}°C · ${humStr}% · ${X('电量','Battery')} ${batStr} · ${age}${X('秒前','s ago')}`;
+ let html='';
+ if(external&&x.state==='lost'){
+  const msg=c.enabled&&c.automatic?X('自动模式已满速 100% 保护。请检查电池或距离，也可先切回内置传感器。','Auto mode is running at 100% for safety. Check the battery or range, or switch to the built-in sensor.'):X('请检查电池或距离，也可先切回内置传感器。开启自动模式时将满速 100% 保护。','Check the battery or range, or switch to the built-in sensor. Auto mode will run at 100% for safety.');
+  html+=bn('err','thermo',X('外置传感器已失联超过 3 分钟','External sensor lost for over 3 min'),msg);
+ }
+ html+=group(X('当前数据源','Active source'))+'<div class="opts">'+opt(X('内置传感器','Built-in sensor'),!external,'extSource',0,X('使用控制器主板上的温湿度计',"Uses the controller's onboard sensor"))+
+ opt(model,external,'extSource',1,sub+(external&&low?'<br>'+warnExt(X('电池电量低，请尽快更换纽扣电池','Low battery. Replace the coin cell soon.')):''))+'</div>';
+ if(binding)html+=group(X('绑定进度','Pairing'))+note(X('正在连接并验证传感器（约需 5~10 秒）…','Connecting and verifying sensor (5–10s)…'));
+ else if(r&&!extUI.expand){
+  const kv=(k,v)=>`<div class="row kv"><span class="rt">${k}</span><span class="rv">${v}</span></div>`;
+  const connection=!external?X('已暂停（使用内置中）','Paused (using built-in)'):x.state==='ok'?X('正常（每 30 秒更新）','Connected (updates every 30s)'):x.state==='lost'?warnExt(X('已失联','Disconnected')):x.state==='stale'?warnExt(X('信号较弱（已 '+age+' 秒未更新）','Weak signal ('+age+'s ago)')):connecting;
+  const battery=x.battery_pct==null?'--':x.battery_pct+'%'+(x.battery_mv==null?'':X('（',' (')+(x.battery_mv/1000).toFixed(2)+'V'+X('）',')'));
+  html+=group(X('已绑定外置传感器','Paired external sensor'))+'<div class="ext-card">'+kv(X('设备型号','Model'),model)+kv(X('蓝牙地址','MAC address'),macDisplay)+kv(X('连接状态','Connection'),connection)+kv(X('电池电量','Battery'),low?warnExt(battery):battery)+kv(X('信号强度','Signal'),x.rssi==null?'--':signal(x.rssi)+X('（',' (')+x.rssi+' dBm'+X('）',')'))+'</div>'+btn('extScan',X('更换传感器','Replace sensor'))+btn('extUnbind',X('解除绑定','Unbind sensor'),'','btn danger');
+ }else{
+  html+=group(X('添加外置传感器','Add external sensor'));
+  html+=scanning?btn('',X('正在搜索（'+(x.scan_remaining||0)+'s）…','Scanning ('+(x.scan_remaining||0)+'s)…'),'disabled','btn')+btn('extStop',X('停止搜索','Stop scanning')):btn('extScan',X('搜索附近传感器','Scan for nearby sensors'),'','btn');
+  if(results.length){
+   html+='<div class="ext-card" style="margin-top:10px">'+results.map(item=>{
+    const paired=item.mac===rMac;
+    const rssiTxt=Number.isFinite(item.rssi)?signal(item.rssi)+X('（',' (')+item.rssi+' dBm'+X('）',')'):'--';
+    return `<div class="row"><span class="rt">${extModel(item)}<small>${X('尾号 ','Ends in ')+esc(item.mac.slice(-5))+X(' · 信号',' · Signal ')+rssiTxt}</small></span><button class="ext-pair" data-a="extPair" ${paired?'disabled':'data-mac="'+esc(item.mac)+'"'}>${paired?X('已绑定','Paired'):X('绑定','Pair')}</button></div>`;
+   }).join('')+'</div>';
+  }
+  if(extUI.empty&&!scanning&&!binding&&!results.length&&!extUI.stoppedByThisClient)html+=note(X('未发现支持的传感器。请把温湿度计放到距离控制器 2 米内再试。','No supported sensors found. Place the sensor within 2 m of the controller and try again.'));
+  if(r)html+=btn('extCancel',t('cancel'));
+ }
+ const error=extErrors[extUI.error];
+ if(error)html+='<div class="ext-err">'+esc(X(...error))+'</div>';
+ html+=note(X('切到外置传感器后，自动温控和主页均以外置数据为准，不再使用主板内置传感器。外置数据每 30 秒更新一次；连续 3 分钟无法读取时将报“温度失联”，自动模式会全速运行保护设备。','When using an external sensor, auto mode and the home screen ignore the onboard sensor. Readings update every 30 seconds; if lost for 3 minutes, auto mode runs at 100% for safety.'));
+ const body=$('dlgB');setH(body,html);
+ body.querySelectorAll('button').forEach(b=>{b.disabled=Boolean(lock||!b.dataset.a||b.dataset.a==='extSource'&&b.dataset.v==='1'&&!r||b.dataset.a==='extPair'&&!b.dataset.mac)});
+}
+
 const A={
- go:e=>{ui.tab=e.dataset.v;paint();scrollTo(0,0)},
+ extDlg:openExt,
+ extSource:e=>extSend('ext_source',{source:Number(e.dataset.v)}),
+ extScan:()=>{extUI.expand=true;extUI.empty=false;extUI.participated=true;extUI.stoppedByThisClient=false;return extSend('ext_scan_start').then(ok=>{if(!ok)extUI.participated=false;return ok;})},
+ extStop:()=>extSend('ext_scan_stop',{},()=>{extUI.stoppedByThisClient=true;extUI.empty=false;}),
+ extCancel:async()=>{if(state.ext_status?.scanning){const ok=await A.extStop();if(!ok&&state.ext_status?.scanning)return;}extUI.expand=false;paint()},
+ extPair:e=>{const mac=normMac(e.dataset.mac);const r=(state.ext_status?.scan_results||[]).find(it=>it&&normMac(it.mac)===mac);if(!r)return;extUI.target=mac;extUI.bindPending=true;extUI.participated=false;extUI.observedScan=false;extUI.empty=false;return extSend('ext_bind',{driver:r.driver,mac,name:r.name||''},()=>{extUI.bindPending=false;}).then(ok=>{extUI.bindPending=false;if(!ok)extUI.target='';return ok;})},
+ extUnbind:async()=>{const ok=await ask(X('解除绑定外置传感器？','Unbind external sensor?'),X('解绑后将自动切回内置传感器。','The fan will switch back to the built-in sensor.'),X('解除绑定','Unbind'),'danger');if(live()&&state.ext_status?.supported===true)openExt();if(ok&&live()&&!state.calibrating&&!state.ext_status?.binding&&state.config?.ext_sensor)await extSend('ext_unbind')},
+ go:e=>{if(ui.tab==='curve'&&e.dataset.v!=='curve'&&(curveTimer||(dirty&&!curveSaving&&!curveFail)))saveCurve();ui.tab=e.dataset.v;paint();scrollTo(0,0)},
  power:()=>{if(live())send({op:'enable',value:!state.config.enabled})},
  mode:async e=>{if(busyGuard())return;const a=e.dataset.m==='1',c=state.config;if(a===c.automatic)return;if(a&&!valid()&&!c.prompt_seen)return firstPrompt(true);
   await send({op:'auto',value:a})},
@@ -609,10 +768,9 @@ const A={
  reconnect:()=>{retryBusy=true;paint();clearTimeout(pollTimer);if(!polling)poll()},
  cu:e=>{ui.cu=+e.dataset.v;paint()},
  nsel:e=>{ui.node=e.dataset.i!=null?+e.dataset.i:clamp(ui.node+ +e.dataset.v,0,draft.points.length-1);renderCurve()},
- addPt:()=>{const points=insertPoint(draft.points);if(!points)return toast(t('noRoom'),true);const old=draft.points;draft.points=points;ui.node=Math.max(0,points.findIndex(p=>!old.some(o=>o[0]===p[0])));dirty=true;renderCurve()},
- del:()=>{if(draft.points.length<=2)return;draft.points.splice(ui.node,1);ui.node=Math.min(ui.node,draft.points.length-1);dirty=true;renderCurve()},
- undo:()=>{loadDraft();toast('');paint()},
- saveCurve:async()=>{if(busyGuard())return;const points=draft.points.map(p=>[...p]).sort((a,b)=>a[0]-b[0]);const error=curveError(points,100);if(error)return toast(t(error),true);if(await send({op:'config',config:{curve_unit:0,points}}))loadDraft();paint()},
+ addPt:()=>{if(busyGuard())return;const points=insertPoint(draft.points);if(!points)return toast(t('noRoom'),true);const old=draft.points;draft.points=points;ui.node=Math.max(0,points.findIndex(p=>!old.some(o=>o[0]===p[0])));markCurveEdit();renderCurve();saveCurve()},
+ del:()=>{if(busyGuard()||draft.points.length<=2)return;draft.points.splice(ui.node,1);ui.node=Math.min(ui.node,draft.points.length-1);markCurveEdit();renderCurve();saveCurve()},
+ retryCurve:()=>{saveCurve()},
  calStart:async()=>{if(busyGuard())return;if(await ask(t('confirmCalT'),t('confirmCal'),t('startCal')))send({op:'calibrate'})},
  cancelCal:()=>{send({op:'cancel'})},
  rename:()=>{if(busyGuard())return;dlg({title:t('deviceName'),body:`<div class="field"><input id="nameIn" maxlength="20" autocomplete="off" value="${esc(state.name||'')}"><span class="cnt" id="nameCnt"></span></div><p class="note">${t('nameNote')}</p>`,btns:[[t('cancel'),'',()=>closeDlg()],[t('renameDevice'),'primary',()=>{const v=$('nameIn').value.trim();if(!v||Array.from(v).length>20||new TextEncoder().encode(v).length>63)return toast(t('rejected'),true);closeDlg();send({op:'rename',name:v})}]],mount:()=>{const i=$('nameIn'),f=()=>$('nameCnt').textContent=Array.from(i.value).length+'/20';i.oninput=f;f();i.onkeydown=e=>{if(e.key==='Enter')dl.btns[1][2]()};setTimeout(()=>i.focus(),50)}})},
@@ -644,17 +802,17 @@ const stopCustom=()=>{clearTimeout(customTimer);customTimer=null};addEventListen
 document.addEventListener('contextmenu',e=>{if(e.target.closest('[data-a=custom]'))e.preventDefault()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dl)closeDlg();const tb=e.target.closest?.('.tab');if(tb&&(e.key==='ArrowRight'||e.key==='ArrowLeft'||e.key==='Home'||e.key==='End')){const i=TABS.findIndex(x=>x[0]===tb.dataset.v),n=TABS[e.key==='Home'?0:e.key==='End'?3:(i+(e.key==='ArrowRight'?1:3))%4][0];e.preventDefault();ui.tab=n;paint();document.querySelector(`.tab[data-v=${n}]`).focus()}});
 /* hold-to-repeat for -/+ */
-let hT=null,hI=null,hDirty=0;const stopHold=()=>{clearTimeout(hT);clearInterval(hI);hT=hI=null;if(hDirty===1)applyManual();hDirty=0};
+let hT=null,hI=null,hDirty=0;const stopHold=()=>{clearTimeout(hT);clearInterval(hI);hT=hI=null;if(hDirty===1)applyManual();else if(hDirty===2)scheduleCurveSave();hDirty=0};
 function hold(k,dv){if(k==='d'){if(!live())return false;if(state.calibrating){toast(t('busy'),true);return false}if(!manualMode()){toast(t('autoLocked'));return false}
   const u=effUnit(),st=u?25:1,mx=u?maxR():100,cur=enabledNow()?manual.value:0,v=clamp(Math.round(cur/st)*st+dv*st,0,mx);if(v===cur)return false;
   manual.unit=u;manual.value=v;manualDirty=true;manualRevision++;hDirty=1;paint();return true}
  if(!live()||state.calibrating)return false;const D=draft.points,n=D[ui.node],t0=n[0],o0=n[1];
  if(k==='t')moveNode(D,ui.node,n[0]+dv,n[1]);else if(cuOn()){const r=displayCalRpm(rpmFor(n[1]))+dv*50;moveNode(D,ui.node,n[0],r<=0?0:clamp(Math.round(pwmFor(r)*10)/10,0,100))}else moveNode(D,ui.node,n[0],Math.round(n[1])+dv);
- if(n[0]===t0&&n[1]===o0)return false;dirty=true;renderCurve();return true}
+ if(n[0]===t0&&n[1]===o0)return false;markCurveEdit();hDirty=2;renderCurve();return true}
 document.addEventListener('pointerdown',e=>{const el=e.target.closest('[data-hold]');if(!el||el.disabled)return;e.preventDefault();stopHold();const [k,dv]=el.dataset.hold.split(':'),f=()=>{if(!hold(k,+dv)){clearInterval(hI);hI=null}};f();hT=setTimeout(()=>{hI=setInterval(f,60)},380)});
 addEventListener('pointerup',stopHold);addEventListener('pointercancel',stopHold);addEventListener('blur',stopHold);
 let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(paint,80)});
 /* ---- polling ---- */
-async function poll(){const epoch=commandEpoch;polling=true;try{if(!commandsPending&&!uploading){const next=await request();if(epoch===commandEpoch&&!commandsPending)render(next);}retryBusy=false;}catch(e){if(epoch!==commandEpoch||commandsPending)return;online=false;if(rebooting)rebooting.sawOffline=true;retryBusy=false;paint();}finally{polling=false;pollTimer=setTimeout(poll,1500);}}
+async function poll(){const epoch=commandEpoch;polling=true;try{if(!commandsPending&&!uploading){const next=await request();if(epoch===commandEpoch&&!commandsPending)render(next);}retryBusy=false;}catch(e){if(epoch!==commandEpoch||commandsPending)return;online=false;if(rebooting)rebooting.sawOffline=true;retryBusy=false;paint();}finally{polling=false;pollTimer=setTimeout(poll,dl?.external&&(state?.ext_status?.scanning||state?.ext_status?.binding)?1000:1500);}}
 buildDial();bindDial();bindGraph();translate();applyTheme();requestAnimationFrame(frame);poll();
 </script></body></html>

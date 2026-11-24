@@ -103,6 +103,7 @@ void Controller::log_press(fan_ui::Button b) {
 }
 void Controller::log_click() { ESP_LOGI("joystick", "center click"); }
 void Controller::setup() {
+  hub.boot(millis());
   center_button_->add_on_state_callback([this](bool pressed) { ui_.center_state(*this, pressed, millis()); });
   up_button_->add_on_state_callback([this](bool pressed) {
     if (pressed)
@@ -149,7 +150,7 @@ void Controller::setup() {
   if (initialize)
     save();
   temperature_source_->add_on_state_callback([this](float v) { core.sample_temperature(v, millis()); });
-  humidity_source_->add_on_state_callback([this](float v) { core.humidity = v; });
+  humidity_source_->add_on_state_callback([this](float v) { core.sample_humidity(v); });
   rpm_source_->add_on_state_callback([this](float v) { core.sample_rpm(v / 2.0f, millis()); });
   translate();
   // The native portal must precede our root page, including when AP starts later.
@@ -163,10 +164,15 @@ void Controller::on_shutdown() {
   if (booted_ && core.dirty && !core.calibrating())
     save();
 }
+bool Controller::provisioning_busy() const {
+  auto state = provisioning_->get_improv_state();
+  return state == improv::STATE_AUTHORIZED || state == improv::STATE_PROVISIONING;
+}
 void Controller::loop() {
   uint32_t now = millis();
   if (uint32_t(now - last_tick_) >= 50) {
     last_tick_ = now;
+    hub.update(now);
     core.tick(now);
     if (core.calibration_pending_save) {
       core.calibration_save_result(save());
@@ -218,7 +224,7 @@ void Controller::action(unsigned id, float value) {
       ok = core.automatic(value != 0);
       break;
     case 11:
-      ok = core.start_calibration(millis());
+      ok = hub.allow_calibration() && core.start_calibration(millis());
       break;
     case 12:
       core.cancel();
@@ -306,6 +312,13 @@ void Controller::publish() {
   firmware_version_->publish_state(ESPHOME_PROJECT_VERSION);
 }
 void Controller::config_json(JsonObject o, const Settings &s) {
+  o["sensor_source"] = unsigned(s.sensor_source);
+  if (s.ext_sensor.bound) {
+    auto ext = o["ext_sensor"].to<JsonObject>();
+    ext["driver"] = s.ext_sensor.driver.data();
+    ext["mac"] = s.ext_sensor.mac.data();
+    ext["name"] = s.ext_sensor.name.data();
+  } else o["ext_sensor"] = nullptr;
   o["name"] = s.device_name.data();
   o["enabled"] = s.enabled;
   o["automatic"] = s.automatic;
@@ -344,6 +357,13 @@ void Controller::config_json(JsonObject o, const Settings &s) {
 }
 bool Controller::read_config(JsonObject o, Settings &s, bool full) {
   if (full) {
+    if (!o["ext_sensor"].isNull()) {
+      if (!o["ext_sensor"].is<JsonObject>() || !BleSensorHub::parse_config(o["ext_sensor"].as<JsonObject>(), s.ext_sensor))
+        return false;
+    }
+    if (!o["sensor_source"].isNull() && (!o["sensor_source"].is<unsigned>() || o["sensor_source"].as<unsigned>() > 1)) return false;
+    s.sensor_source = s.ext_sensor.bound ? fan_core::SensorSource(o["sensor_source"].as<unsigned>()) : fan_core::SensorSource::INTERNAL;
+    s.ext_handle = o["ext_handle"] | uint16_t(0);
     const char *required[] = {"enabled", "automatic", "english",  "prompt_seen", "manual_unit", "curve_unit", "power",
                               "manual",  "last_pwm",  "last_rpm", "pulses",      "points",      "cal"};
     for (auto key : required)
@@ -481,7 +501,7 @@ bool Controller::save() {
   auto record = std::make_unique<Record>();
   auto &rec = *record;
   rec.seq = sequence_ + 1;
-  std::string data = json::build_json([&](JsonObject o) { config_json(o, core.settings); });
+  std::string data = json::build_json([&](JsonObject o) { config_json(o, core.settings); o["ext_handle"] = core.settings.ext_handle; });
   if (data.size() >= sizeof(rec.json)) {
     core.save_fault = true;
     return false;
@@ -503,6 +523,7 @@ bool Controller::save() {
 }
 std::string Controller::status() {
   return json::build_json([&](JsonObject o) {
+    hub.status(o["ext_status"].to<JsonObject>());
     config_json(o["config"].to<JsonObject>(), core.settings);
     o["name"] = core.settings.device_name.data();
     o["name_editable"] = true;
@@ -591,6 +612,7 @@ bool Controller::command(JsonObject o) {
   if (op == "provision") {
     if (core.calibrating())
       return false;
+    hub.pause("ble_busy");
     improv_ble::global_improv_component->start();
     return true;
   }
@@ -604,9 +626,10 @@ bool Controller::command(JsonObject o) {
     return true;
   }
   if (op == "calibrate")
-    return core.start_calibration(millis(), o["auto_after"].as<bool>());
+    return hub.allow_calibration() && core.start_calibration(millis(), o["auto_after"].as<bool>());
   if (core.calibrating())
     return false;
+  if (op.compare(0,4,"ext_") == 0) return hub.command(op, o);
   if (op == "auto") {
     if (!o["value"].is<bool>())
       return false;
@@ -763,6 +786,7 @@ void Controller::handleRequest(AsyncWebServerRequest *r) {
   r->send(response);
 }
 void Controller::factory_reset() {
+  hub.pause("");
   core.factory_requested = false;
   core.enable(false);
   pwm_output_->set_level(0);

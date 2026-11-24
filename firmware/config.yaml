@@ -6,7 +6,7 @@ esphome:
   min_version: 2026.10.1
   project:
     name: local.single_fan
-    version: 1.3.1
+    version: 1.4.0
 esp32:
   board: esp32dev
   flash_size: 4MB
@@ -16,6 +16,7 @@ esp32:
     advanced:
       enable_ota_rollback: true
     sdkconfig_options:
+      CONFIG_BT_GATTC_CACHE_NVS_FLASH: "y"
       CONFIG_HTTPD_MAX_REQ_HDR_LEN: "4096"
 logger:
   level: INFO
@@ -23,7 +24,19 @@ api:
   reboot_timeout: 0s
 ota:
   - platform: esphome
+    on_begin:
+      - lambda: id(controller).ota_active(true);
+    on_abort:
+      - lambda: id(controller).ota_active(false);
+    on_error:
+      - lambda: id(controller).ota_active(false);
   - platform: web_server
+    on_begin:
+      - lambda: id(controller).ota_active(true);
+    on_abort:
+      - lambda: id(controller).ota_active(false);
+    on_error:
+      - lambda: id(controller).ota_active(false);
 safe_mode:
   boot_is_good_after: 10s
 web_server_base:
@@ -40,6 +53,20 @@ wifi:
   ap:
     ap_timeout: 20s
 captive_portal:
+esp32_ble:
+  max_connections: 3
+esp32_ble_tracker:
+  scan_parameters:
+    active: false
+    continuous: false
+    duration: 10s
+  on_ble_advertise:
+    then:
+      - lambda: id(controller).hub.advertisement(x);
+ble_client:
+  - id: ext_client
+    mac_address: "00:00:00:00:00:00"
+    auto_connect: false
 improv_ble:
   id: fan_provisioning
   authorizer: none
@@ -97,6 +124,7 @@ display:
     lambda: id(controller).draw_current();
 single_fan:
   id: controller
+  sensor_client: ext_client
   pwm_output: fan_pwm
   power_output: fan_power
   temperature_source: raw_temperature

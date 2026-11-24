@@ -5,7 +5,7 @@ import json
 from urllib.parse import parse_qs
 
 FIXTURE = Path('/tmp/fan-captive-preview.json')
-DEFAULT = dict(name='breezebox-a09058', mac='AA:BB:CC:A0:90:58', aps=[{},
+DEFAULT = dict(name='breezebox-a09058', mac='B0:CB:D8:A0:90:58', aps=[{},
     dict(ssid='Home Wi-Fi', rssi=-42, lock=True),
     dict(ssid='Living Room', rssi=-64, lock=True),
     dict(ssid='Guest', rssi=-78, lock=False)])
